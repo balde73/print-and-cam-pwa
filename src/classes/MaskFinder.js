@@ -1,10 +1,11 @@
 export default class MaskFinder {
-  constructor (capture, levels) {
+  constructor (capture, levels = 5, initialLight = 50) {
     this.capture = capture
     this.width = capture.video.width
     this.height = capture.video.height
     this.shot = new cv.Mat(this.height, this.width, cv.CV_8UC4)
     this.levels = levels
+    this.initialLight = initialLight
   }
   snapshot () {
     this.capture.read(this.shot)
@@ -13,7 +14,23 @@ export default class MaskFinder {
   setLevels (levels) {
     this.levels = levels
   }
+  setInitialLight (light) {
+    this.initialLight = light
+  }
+  getLightLevels () {
+    let light = this.initialLight
+    const steps = this.levels
+    const maxStep = parseInt((255 - light) / 3 * 2)
+    const step = maxStep / steps
+    let lightLevels = []
+    for (let i = 0; i < this.levels; i++) {
+      lightLevels.push(light)
+      light = light + step
+    }
+    return lightLevels
+  }
   search () {
+    const lightLevels = this.getLightLevels()
     let shotFreeze = new cv.Mat(this.height, this.width, cv.CV_8UC4)
     let gray = new cv.Mat(this.height, this.width, cv.CV_8UC4)
     let tmp = new cv.Mat(this.height, this.width, cv.CV_8UC4)
@@ -22,10 +39,10 @@ export default class MaskFinder {
     cv.cvtColor(this.shot, gray, cv.COLOR_RGBA2GRAY, 0)
     let mask = null
     let bestMask = null
-    for (let i = 0; i < this.levels.length; i++) {
-      let level = this.levels[i]
+    for (let i = 0; i < lightLevels.length; i++) {
+      let level = lightLevels[i]
       cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY)
-      cv.imshow(`bw-threshold-${level}`, tmp)
+      cv.imshow(`bw-threshold-${i}`, tmp)
       mask = this.__findMask(tmp)
       if (mask != null) {
         bestMask = mask

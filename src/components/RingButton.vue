@@ -28,7 +28,7 @@ export default {
   color: white;
   display: block;
   border-radius: 100%;
-  border: 2px solid;
+  border: 2px solid rgba(255,255,255,.4);;
   height: 8vh;
   width: 8vh;
   margin: 2vh;
