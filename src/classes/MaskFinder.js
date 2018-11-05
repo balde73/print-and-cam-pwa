@@ -42,14 +42,15 @@ export default class MaskFinder {
     for (let i = 0; i < lightLevels.length; i++) {
       let level = lightLevels[i]
       cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY)
-      cv.imshow(`bw-threshold-${i}`, tmp)
       mask = this.__findMask(tmp)
       if (mask != null) {
+        // cv.drawContours(shotFreeze, mask, -1, new cv.Scalar(0, 0, 0), 1)
         bestMask = mask
       } else if (bestMask) {
         console.log('break!')
         break
       }
+      cv.imshow(`bw-threshold-${i}`, tmp)
     }
     if (bestMask) {
       console.log('mask found!')
@@ -202,10 +203,10 @@ export default class MaskFinder {
   // consider to move this
   __sortPntX (ptA, ptB) {
     if (ptA.x < ptB.x) {
-      return -1
+      return 1
     }
     if (ptA.x > ptB.x) {
-      return 1
+      return -1
     }
     return 0
   }

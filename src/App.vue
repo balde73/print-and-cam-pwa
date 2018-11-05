@@ -1,17 +1,20 @@
 <template>
   <div id="app">
     <div class="canvas-video">
-
       <video ref="video" id="videoInput" autoplay="true"></video>
-      <div id="p0" class="point"></div>
-      <div id="p1" class="point"></div>
-      <div id="p2" class="point"></div>
-      <div id="p3" class="point"></div>
       <div class="pre-controls">
-        light: {{ basicLight }}
+        <div class="icon">
+          <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>preferences</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="4" x2="23" y2="4"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="4" x2="4" y2="4"></line> <rect x="4" y="1" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="22" y1="12" x2="23" y2="12"></line> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="1" y1="12" x2="14" y2="12"></line> <rect data-color="color-2" x="14" y="9" fill="none" stroke-miterlimit="10" width="4" height="6"></rect> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="20" x2="23" y2="20"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="20" x2="4" y2="20"></line> <rect x="4" y="17" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect></g></svg>
+        </div>
+        <div class="text">
+          light: {{ basicLight }} ({{ percLight }}%)
+        </div>
+        <div class="icon">
+          <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>barcode qr</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,10 1,10 1,1 10,1 10,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,10 14,10 14,1 14,1 23,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,23 1,23 1,14 10,14 10,14 "></polygon> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,19 23,14 19,14 19,17 15,17 15,14 "></polyline> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,23 15,23 15,21 "></polyline> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,6 5,6 5,5 6,5 6,6 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 19,6 18,6 18,6 18,5 19,5 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,19 5,19 5,18 6,18 6,19 "></polygon></g></svg>
+        </div>
       </div>
       <div class="controls">
-        <div @click="analyzeLight" class="gallery">
+        <div class="gallery">
           <canvas id="canvasTransform"></canvas>
         </div>
         <RingButton @click.native="toggleRecording" active="is-recording" v-bind:status="isRecording" />
@@ -45,6 +48,7 @@ export default {
       isRecording: false,
       isMagic: false,
       basicLight: 0,
+      percLight: 0,
       levels: 5,
       timer: null
     }
@@ -69,18 +73,23 @@ export default {
           },
           audio: false
         }
-        this.stream = await navigator.mediaDevices.getUserMedia(settings)
+        try {
+          this.stream = await navigator.mediaDevices.getUserMedia(settings)
+          this.video.src = window.URL.createObjectURL(this.stream)
 
-        let {width, height} = this.stream.getTracks()[0].getSettings()
-        this.video.height = height
-        this.video.width = width
+          let self = this
+          this.video.onloadedmetadata = function () {
+            self.video.height = this.videoHeight
+            self.video.width = this.videoWidth
 
-        this.video.srcObject = this.stream
-        this.capture = new cv.VideoCapture(this.video)
-        this.maskFinder = new MaskFinder(this.capture)
-        this.isRecording = true
-
-        this.analyzeLight()
+            self.capture = new cv.VideoCapture(self.video)
+            self.maskFinder = new MaskFinder(self.capture)
+            self.isRecording = true
+            self.analyzeLight()
+          }
+        } catch (error) {
+          alert(error)
+        }
       }
     },
     toggleAnalyzeLight () {
@@ -92,7 +101,6 @@ export default {
       }
     },
     analyzeLight () {
-      console.log(this.basicLight)
       let timeRefresh = 10
       const level = this.basicLight
       let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
@@ -103,13 +111,13 @@ export default {
       tmp.delete()
       const totalPixels = this.video.height * this.video.width
       const perc = whitePixels / totalPixels
-      console.log(perc)
+      this.percLight = perc
       if (perc < 0.2 && this.basicLight > 10) {
         this.basicLight -= 10
       } else if (perc > 0.3 && this.basicLight < 200) {
         this.basicLight += 10
       } else {
-        // good percent!
+        // good light!
         this.maskFinder.setInitialLight(this.basicLight)
         timeRefresh = 1000
       }
@@ -178,6 +186,12 @@ video{
   height: 5vh;
   text-align: center;
   color: white;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.pre-controls .icon{
+  padding: 0 2rem;
 }
 .controls{
   height: 15vh;
