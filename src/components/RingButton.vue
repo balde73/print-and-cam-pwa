@@ -28,7 +28,7 @@ export default {
   color: white;
   display: block;
   border-radius: 100%;
-  border: 2px solid rgba(255,255,255,.4);;
+  border: 2px solid;
   height: 8vh;
   width: 8vh;
   margin: 2vh;
@@ -45,8 +45,11 @@ export default {
   border-radius: 100%;
   transition: .3s linear;
 }
+.is-recording{
+  color: #9369ff;
+}
 .is-recording:before{
-  background-color: brown
+  background-color: #9369ff
 }
 .is-recording.active:before{
   border-radius: 0;
@@ -56,7 +59,7 @@ export default {
   margin-left: -2vh;
 }
 .is-magic:before{
-  background-color: aquamarine;
+  background-color: white;
 }
 .is-magic.active:before{
   opacity: .2;

@@ -110,11 +110,11 @@ export default {
       const whitePixels = cv.countNonZero(tmp)
       tmp.delete()
       const totalPixels = this.video.height * this.video.width
-      const perc = whitePixels / totalPixels
+      const perc = parseInt(whitePixels / totalPixels * 100)
       this.percLight = perc
-      if (perc < 0.2 && this.basicLight > 10) {
+      if (perc < 20 && this.basicLight > 10) {
         this.basicLight -= 10
-      } else if (perc > 0.3 && this.basicLight < 200) {
+      } else if (perc > 30 && this.basicLight < 200) {
         this.basicLight += 10
       } else {
         // good light!
@@ -189,6 +189,7 @@ video{
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  color: #9369ff;
 }
 .pre-controls .icon{
   padding: 0 2rem;
@@ -201,19 +202,21 @@ video{
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,.2)
+  background: rgba(255,255,255,.1)
 }
 .gallery{
   margin: 2vh;
-  border: 2px solid rgba(255,255,255,.4);
+  border: 2px solid white;
+  background-color: rgba(255,255,255,.05);
   height: 8vh;
+  border-radius: 100%;
+  overflow: hidden;
 }
 #canvasTransform{
   height: 8vh;
   width: 8vh;
 }
 .tools canvas{
-  height: 200px;
-  width: 350px;
+  max-height: 50vw;
 }
 </style>
