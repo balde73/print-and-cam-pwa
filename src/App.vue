@@ -14,8 +14,8 @@
         </div>
       </div>
       <div class="controls">
-        <div class="gallery">
-          <canvas id="canvasTransform"></canvas>
+        <div class="gallery" :class="{'open': openCropImage}" >
+          <canvas @click="openCropImage = !openCropImage" id="canvasTransform"></canvas>
         </div>
         <RingButton @click.native="toggleRecording" active="is-recording" v-bind:status="isRecording" />
         <RingButton @click.native="snapshot" active="is-magic" v-bind:status="isMagic" />
@@ -50,7 +50,8 @@ export default {
       basicLight: 0,
       percLight: 0,
       levels: 5,
-      timer: null
+      timer: null,
+      openCropImage: false
     }
   },
   mounted () {
@@ -209,12 +210,23 @@ video{
   border: 2px solid white;
   background-color: rgba(255,255,255,.05);
   height: 8vh;
+  width: 8vh;
   border-radius: 100%;
   overflow: hidden;
 }
-#canvasTransform{
-  height: 8vh;
-  width: 8vh;
+.gallery canvas{
+  max-height: 8vh;
+  max-width: 8vh;
+}
+.gallery.open{
+  overflow: auto;
+}
+.gallery.open canvas{
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: 100vw;
+  max-height: none;
 }
 .tools canvas{
   max-height: 50vw;
