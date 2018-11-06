@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <div class="canvas-video">
-      <video ref="video" id="videoInput" autoplay="true"></video>
+      <video ref="video" id="videoInput" autoplay="true" playsinline></video>
       <div class="pre-controls">
         <div class="icon">
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>preferences</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="4" x2="23" y2="4"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="4" x2="4" y2="4"></line> <rect x="4" y="1" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="22" y1="12" x2="23" y2="12"></line> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="1" y1="12" x2="14" y2="12"></line> <rect data-color="color-2" x="14" y="9" fill="none" stroke-miterlimit="10" width="4" height="6"></rect> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="20" x2="23" y2="20"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="20" x2="4" y2="20"></line> <rect x="4" y="17" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect></g></svg>
@@ -14,7 +14,7 @@
         </div>
       </div>
       <div class="controls">
-        <div class="gallery" :class="{'open': openCropImage}" >
+        <div class="gallery" :class="{'open': openCropImage, 'flash': galleryFlash}" >
           <canvas @click="openCropImage = !openCropImage" id="canvasTransform"></canvas>
         </div>
         <RingButton @click.native="toggleRecording" active="is-recording" v-bind:status="isRecording" />
@@ -32,6 +32,7 @@
 import Hello from './components/Hello'
 import RingButton from './components/RingButton'
 import MaskFinder from './classes/MaskFinder.js'
+import Kircher from './classes/Kircher.js'
 
 export default {
   name: 'app',
@@ -51,7 +52,8 @@ export default {
       percLight: 0,
       levels: 5,
       timer: null,
-      openCropImage: false
+      openCropImage: false,
+      galleryFlash: false
     }
   },
   mounted () {
@@ -91,10 +93,11 @@ export default {
         } catch (error) {
           alert(error)
         }
+      } else {
+        alert('browser o dispositivo non supportato!')
       }
     },
     toggleAnalyzeLight () {
-      console.log(this.timer)
       if (this.timer != null) {
         this.stopAnalyzeLight()
       } else {
@@ -147,9 +150,24 @@ export default {
     snapshot () {
       this.isMagic = true
       window.setTimeout(() => {
-        this.maskFinder.search()
+        let mask = this.maskFinder.search()
+        // let mask = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
+        // this.capture.read(mask)
+        // cv.imshow(`bw-threshold-0`, mask)
+        if (mask) {
+          this.takeGalleryFlash()
+          let code = Kircher.decode(mask)
+          alert(code)
+          mask.delete()
+        }
         this.isMagic = false
       }, 100)
+    },
+    async takeGalleryFlash () {
+      this.galleryFlash = true
+      window.setTimeout(() => {
+        this.galleryFlash = false
+      }, 300)
     }
   }
 }
@@ -170,9 +188,6 @@ video{
   background: black;
   height: 80vh;
   width: 100vw;
-}
-#canvasTransform{
-  max-height: 300px;
 }
 .canvas-video .point{
   position: absolute;
@@ -217,6 +232,12 @@ video{
 .gallery canvas{
   max-height: 8vh;
   max-width: 8vh;
+}
+.gallery.flash{
+  background-color: white;
+}
+.gallery.flash canvas{
+  opacity: 0;
 }
 .gallery.open{
   overflow: auto;

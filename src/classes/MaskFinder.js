@@ -52,10 +52,12 @@ export default class MaskFinder {
       }
       cv.imshow(`bw-threshold-${i}`, tmp)
     }
+
+    let cropped = null
     if (bestMask) {
       console.log('mask found!')
       this.__drawRect(bestMask)
-      this.__crop(shotFreeze, bestMask)
+      cropped = this.__crop(shotFreeze, bestMask)
     } else {
       console.log('nothing found')
       this.__cleanRect(bestMask)
@@ -63,13 +65,14 @@ export default class MaskFinder {
     tmp.delete()
     gray.delete()
     shotFreeze.delete()
+    return cropped
   }
 
   // private methods
   __crop (img, bestMask) {
     const cropped = this.__fourPointTransform(img, bestMask)
     cv.imshow('canvasTransform', cropped)
-    cropped.delete()
+    return cropped
   }
 
   __drawRect (bestMask) {
