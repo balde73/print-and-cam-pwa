@@ -1,13 +1,16 @@
 export default class Kircher {
   static decode (image) {
-    cv.cvtColor(image, image, cv.COLOR_RGBA2GRAY, 0)
-    const height = image.rows
-    const width = image.cols
+    let rgbaPlanes = new cv.MatVector()
+    cv.split(image, rgbaPlanes)
+    let grayImage = rgbaPlanes.get(2)
+
+    const height = grayImage.rows
+    const width = grayImage.cols
     const qrCodeSize = 60
 
     console.log(width + 'x' + height)
     if (height !== width) {
-      console.log('image is not a square!')
+      console.log('grayImage is not a square!')
       return null
     }
 
@@ -41,7 +44,7 @@ export default class Kircher {
 
         // console.log(fromX + ' ' + fromY + ':' + toX + ' ' + toY)
         let rectSquare = new cv.Rect(fromX, fromY, squareSize, squareSize)
-        let square = image.roi(rectSquare)
+        let square = grayImage.roi(rectSquare)
 
         let centerSquare = parseInt(squareSize / 2)
         let dimCenterSquare = parseInt(squareSize / 4)

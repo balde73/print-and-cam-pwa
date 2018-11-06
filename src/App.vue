@@ -21,7 +21,10 @@
         <RingButton @click.native="snapshot" active="is-magic" v-bind:status="isMagic" />
       </div>
     </div>
-    <Hello />
+    <div class="">
+      Inserisci un codice: <input @change="imgUpload" type="file" id="fileInput" name="file" />
+      <img id="imageSrc" @load="readCode" :src="imgElementSrc" alt="No Image" />
+    </div>
     <div id="bw-threshold-box" class="tools">
       <canvas v-for="level in rangeLevels" v-bind:key="`id-${level}`" :id="`bw-threshold-${level}`" />
     </div>
@@ -53,7 +56,8 @@ export default {
       levels: 5,
       timer: null,
       openCropImage: false,
-      galleryFlash: false
+      galleryFlash: false,
+      imgElementSrc: null
     }
   },
   mounted () {
@@ -168,6 +172,16 @@ export default {
       window.setTimeout(() => {
         this.galleryFlash = false
       }, 300)
+    },
+    imgUpload (e) {
+      const file = e.target.files[0]
+      this.imgElementSrc = URL.createObjectURL(file)
+    },
+    readCode (e) {
+      let image = cv.imread(e.target)
+      let code = Kircher.decode(image)
+      alert(code)
+      image.delete()
     }
   }
 }
@@ -205,6 +219,7 @@ video{
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  align-items: center;
   color: #9369ff;
 }
 .pre-controls .icon{
