@@ -94,7 +94,7 @@ export default class Kircher {
           let vy = Math.abs(line.data32F[1])
 
           code = {
-            value: (vx > vy) ? '0' : '1',
+            value: (vx > vy) ? '1' : '0',
             probability: Math.max(vx, vy)
           }
         }
