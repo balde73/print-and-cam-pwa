@@ -20,13 +20,16 @@ export default class MaskFinder {
   getLightLevels () {
     let light = this.initialLight
     const steps = this.levels
-    const maxStep = parseInt((255 - light) / 3 * 2)
-    const step = maxStep / steps
+    // const maxStep = parseInt((255 - light) / 3 * 2)
+    const maxStep = Math.min(255, light + steps * 5)
+    console.log(light + steps * 5)
+    const step = parseInt((maxStep - light) / steps)
     let lightLevels = []
     for (let i = 0; i < this.levels; i++) {
       lightLevels.push(light)
       light = light + step
     }
+    console.log(lightLevels)
     return lightLevels
   }
   shotAndSearch () {

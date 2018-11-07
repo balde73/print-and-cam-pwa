@@ -15,7 +15,7 @@
       </div>
       <div class="inline-input">
         <label>Light levels</label>
-        <input type="number" min="1" @change="$emit('changeLevels')" v-model.number="settings.levelsLight" />
+        <input type="number" min="1" max="20" @change="$emit('changeLevels')" v-model.number="settings.levelsLight" />
       </div>
       <div @click="$emit('closeSettings')" class="">
         <div class="btn">
@@ -86,6 +86,7 @@ input{
   padding: .5rem;
   display: block;
   border: 0;
+  font-size: 1.2rem;
   border-bottom: 1px solid rgba(0,0,0,.1);
 }
 .btn{
