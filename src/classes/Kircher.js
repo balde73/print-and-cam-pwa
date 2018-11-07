@@ -1,5 +1,29 @@
 export default class Kircher {
-  static decode (image) {
+  static repair (code, n) {
+    if (n === 1) {
+      return code
+    }
+    let finalCode = ''
+    const chunckSize = parseInt(code.length / n)
+    const chuncks = code.match(new RegExp('.{1,' + chunckSize + '}', 'g'))
+    console.log(chuncks)
+    for (let i = 0; i < chunckSize; i++) {
+      let countOne = 0
+      let countZero = 0
+      chuncks.forEach(function (chunck) {
+        if (chunck[i] === '1') {
+          countOne += 1
+        } else if (chunck[i] === '0') {
+          countZero += 1
+        }
+      })
+      finalCode += countOne > countZero ? '1' : '0'
+    }
+    console.log(finalCode)
+    return finalCode
+  }
+
+  static decode (image, nRepair) {
     let rgbaPlanes = new cv.MatVector()
     cv.split(image, rgbaPlanes)
     let grayImage = rgbaPlanes.get(2)
@@ -104,6 +128,7 @@ export default class Kircher {
         }
       }
     }
+    fullCode = this.repair(fullCode, nRepair)
     console.log('number of errors: ' + countError + '/3600')
     return this.__decodeBinaryString(fullCode)
   }

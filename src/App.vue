@@ -1,13 +1,21 @@
 <template>
   <div id="app">
+    <Settings
+      v-bind:settings="settings"
+      v-bind:open="openSettings"
+      v-on:stopLight="stopAnalyzeLight"
+      v-on:startLight="startRecordingLight"
+      v-on:changeLevels="changeLevelsLight"
+      v-on:changeInitialLight="changeInitialLight"
+      v-on:closeSettings="closeSettings" />
     <div class="canvas-video">
       <video ref="video" id="videoInput" autoplay="true" playsinline></video>
       <div class="pre-controls">
-        <div class="icon">
+        <div class="icon" @click="openSettings = true">
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>preferences</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="4" x2="23" y2="4"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="4" x2="4" y2="4"></line> <rect x="4" y="1" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="22" y1="12" x2="23" y2="12"></line> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="1" y1="12" x2="14" y2="12"></line> <rect data-color="color-2" x="14" y="9" fill="none" stroke-miterlimit="10" width="4" height="6"></rect> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="20" x2="23" y2="20"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="20" x2="4" y2="20"></line> <rect x="4" y="17" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect></g></svg>
         </div>
         <div class="text">
-          light: {{ basicLight }} ({{ percLight }}%)
+          light: {{ settings.basicLight }} ({{ percLight }}%)
         </div>
         <div class="icon">
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>barcode qr</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,10 1,10 1,1 10,1 10,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,10 14,10 14,1 14,1 23,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,23 1,23 1,14 10,14 10,14 "></polygon> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,19 23,14 19,14 19,17 15,17 15,14 "></polyline> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,23 15,23 15,21 "></polyline> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,6 5,6 5,5 6,5 6,6 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 19,6 18,6 18,6 18,5 19,5 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,19 5,19 5,18 6,18 6,19 "></polygon></g></svg>
@@ -22,8 +30,12 @@
       </div>
     </div>
     <div class="">
-      Inserisci un codice: <input @change="imgUpload" type="file" id="fileInput" name="file" />
-      <img id="imageSrc" @load="readCode" :src="imgElementSrc" alt="No Image" />
+      <div class="">
+        Carica foto: <input @change="imgUpload" type="file" id="fileInput" name="file" />
+        <button @click="readCode">Leggi</button>
+        <button @click="cropAndReadCode">Taglia e leggi</button>
+        <img id="imageSrc" :src="imgElementSrc" alt="No Image" />
+      </div>
     </div>
     <div id="bw-threshold-box" class="tools">
       <canvas v-for="level in rangeLevels" v-bind:key="`id-${level}`" :id="`bw-threshold-${level}`" />
@@ -36,12 +48,14 @@ import Hello from './components/Hello'
 import RingButton from './components/RingButton'
 import MaskFinder from './classes/MaskFinder.js'
 import Kircher from './classes/Kircher.js'
+import Settings from './components/Settings.vue'
 
 export default {
   name: 'app',
   components: {
     Hello,
-    RingButton
+    RingButton,
+    Settings
   },
   data () {
     return {
@@ -51,25 +65,31 @@ export default {
       maskFinder: null,
       isRecording: false,
       isMagic: false,
-      basicLight: 0,
       percLight: 0,
-      levels: 5,
       timer: null,
       openCropImage: false,
       galleryFlash: false,
-      imgElementSrc: null
+      imgElementSrc: null,
+      settings: {
+        nRepair: 0,
+        overrideLight: false,
+        basicLight: 0,
+        levelsLight: 5,
+        galleryFlash: false
+      },
+      openSettings: false
     }
   },
   mounted () {
-    this.startRecording()
+    this.startRecordingLight()
   },
   computed: {
     rangeLevels: function () {
-      return [...Array(this.levels).keys()]
+      return [...Array(this.settings.levelsLight).keys()]
     }
   },
   methods: {
-    async startRecording () {
+    async startRecordingLight () {
       this.video = this.$refs.video
       if (navigator.mediaDevices.getUserMedia) {
         const settings = {
@@ -90,7 +110,7 @@ export default {
             self.video.width = this.videoWidth
 
             self.capture = new cv.VideoCapture(self.video)
-            self.maskFinder = new MaskFinder(self.capture)
+            self.maskFinder = new MaskFinder(self.capture, self.settings.levelsLight)
             self.isRecording = true
             self.analyzeLight()
           }
@@ -110,23 +130,23 @@ export default {
     },
     analyzeLight () {
       let timeRefresh = 10
-      const level = this.basicLight
+      const lightIntensity = parseInt(this.settings.basicLight)
       let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(tmp)
       cv.cvtColor(tmp, tmp, cv.COLOR_RGBA2GRAY, 0)
-      cv.threshold(tmp, tmp, level, 255, cv.THRESH_BINARY)
+      cv.threshold(tmp, tmp, lightIntensity, 255, cv.THRESH_BINARY)
       const whitePixels = cv.countNonZero(tmp)
       tmp.delete()
       const totalPixels = this.video.height * this.video.width
       const perc = parseInt(whitePixels / totalPixels * 100)
       this.percLight = perc
-      if (perc < 20 && this.basicLight > 10) {
-        this.basicLight -= 10
-      } else if (perc > 30 && this.basicLight < 200) {
-        this.basicLight += 10
+      if (perc < 20 && this.settings.basicLight > 10) {
+        this.settings.basicLight -= 10
+      } else if (perc > 30 && this.settings.basicLight < 200) {
+        this.settings.basicLight += 10
       } else {
         // good light!
-        this.maskFinder.setInitialLight(this.basicLight)
+        this.maskFinder.setInitialLight(this.settings.basicLight)
         timeRefresh = 1000
       }
       this.timer = window.setTimeout(() => {
@@ -148,19 +168,18 @@ export default {
       if (this.isRecording) {
         this.stopRecording()
       } else {
-        this.startRecording()
+        this.startRecordingLight()
       }
     },
     snapshot () {
       this.isMagic = true
       window.setTimeout(() => {
-        let mask = this.maskFinder.search()
-        // let mask = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
-        // this.capture.read(mask)
-        // cv.imshow(`bw-threshold-0`, mask)
+        let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
+        this.capture.read(shot)
+        let mask = this.maskFinder.search(shot)
         if (mask) {
           this.takeGalleryFlash()
-          let code = Kircher.decode(mask)
+          let code = Kircher.decode(mask, this.settings.nRepair)
           alert(code)
           mask.delete()
         }
@@ -177,11 +196,31 @@ export default {
       const file = e.target.files[0]
       this.imgElementSrc = URL.createObjectURL(file)
     },
-    readCode (e) {
-      let image = cv.imread(e.target)
-      let code = Kircher.decode(image)
+    readCode () {
+      let image = cv.imread('imageSrc')
+      let code = Kircher.decode(image, this.settings.nRepair)
       alert(code)
       image.delete()
+    },
+    cropAndReadCode () {
+      let image = cv.imread('imageSrc')
+      this.maskFinder.setInitialLight(80)
+      let croppedImage = this.maskFinder.search(image)
+      let code = null
+      if (croppedImage) {
+        code = Kircher.decode(croppedImage, this.settings.nRepair)
+      }
+      alert(code)
+      return code
+    },
+    changeLevelsLight () {
+      this.maskFinder.setLevels(this.settings.levelsLight)
+    },
+    changeInitialLight () {
+      this.maskFinder.setInitialLight(this.settings.basicLight)
+    },
+    closeSettings () {
+      this.openSettings = false
     }
   }
 }

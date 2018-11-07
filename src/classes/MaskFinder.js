@@ -29,14 +29,23 @@ export default class MaskFinder {
     }
     return lightLevels
   }
-  search () {
-    const lightLevels = this.getLightLevels()
-    let shotFreeze = new cv.Mat(this.height, this.width, cv.CV_8UC4)
-    let gray = new cv.Mat(this.height, this.width, cv.CV_8UC4)
-    let tmp = new cv.Mat(this.height, this.width, cv.CV_8UC4)
+  shotAndSearch () {
     this.capture.read(this.shot)
-    this.shot.copyTo(shotFreeze)
-    cv.cvtColor(this.shot, gray, cv.COLOR_RGBA2GRAY, 0)
+    console.log(this.shot)
+    const cropped = this.search(this.shot)
+    this.shot.delete()
+    return cropped
+  }
+  search (photo) {
+    const width = photo.cols
+    const height = photo.rows
+    console.log('searchSize: ' + width + 'x' + height)
+    const lightLevels = this.getLightLevels()
+    let shotFreeze = new cv.Mat(height, width, cv.CV_8UC4)
+    let gray = new cv.Mat(height, width, cv.CV_8UC4)
+    let tmp = new cv.Mat(height, width, cv.CV_8UC4)
+    photo.copyTo(shotFreeze)
+    cv.cvtColor(shotFreeze, gray, cv.COLOR_RGBA2GRAY, 0)
     let mask = null
     let bestMask = null
     for (let i = 0; i < lightLevels.length; i++) {
