@@ -244,10 +244,11 @@ html, body{
 }
 .canvas-video{
   background-color: black;
+  position: relative;
 }
 video{
   background: black;
-  height: 80vh;
+  height: 100vh;
   width: 100vw;
 }
 .canvas-video .point{
@@ -260,7 +261,10 @@ video{
   transition: .5s linear;
 }
 .pre-controls{
+  position: absolute;
+  bottom: 15vh;
   height: 5vh;
+  width: 100%;
   text-align: center;
   color: white;
   display: flex;
@@ -268,19 +272,24 @@ video{
   justify-content: space-between;
   align-items: center;
   color: #9369ff;
+  background-color: rgba(0,0,0,.7)
 }
 .pre-controls .icon{
   padding: 0 2rem;
 }
 .controls{
+  position: absolute;
+  bottom: 0;
+  left: 0;
   height: 15vh;
+  width: 100%;
   border-top: 1px solid rgba(255,255,255,.1);
   box-sizing: border-box;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,.1)
+  background: rgba(0,0,0,.9)
 }
 .gallery{
   margin: 2vh;
