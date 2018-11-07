@@ -32,9 +32,6 @@ export default {
     'settings': Object,
     'open': Boolean
   },
-  mounted () {
-    console.log(this.settings)
-  },
   computed: {
     isOpen () {
       return this.open
@@ -62,6 +59,7 @@ export default {
   background-color: white;
   z-index: 1000;
   overflow: hidden;
+  font-size: 1.2rem;
 }
 .modal.is-open{
   width: 100%;
@@ -82,7 +80,7 @@ export default {
   padding: 1rem;
 }
 label{
-
+  font-weight: bolder;
 }
 input{
   padding: .5rem;

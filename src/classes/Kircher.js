@@ -1,25 +1,25 @@
 export default class Kircher {
   static repair (code, n) {
-    if (n === 1) {
-      return code
-    }
     let finalCode = ''
     const chunckSize = parseInt(code.length / n)
-    const chuncks = code.match(new RegExp('.{1,' + chunckSize + '}', 'g'))
-    console.log(chuncks)
+    const chuncks = []
+
+    while (code.length > 0) {
+      chuncks.push(code.splice(0, chunckSize))
+    }
     for (let i = 0; i < chunckSize; i++) {
       let countOne = 0
       let countZero = 0
       chuncks.forEach(function (chunck) {
-        if (chunck[i] === '1') {
-          countOne += 1
-        } else if (chunck[i] === '0') {
-          countZero += 1
+        if (chunck[i].value === '1') {
+          countOne += chunck[i].probability
+        } else if (chunck[i].value === '0') {
+          countZero += chunck[i].probability
         }
       })
-      finalCode += countOne > countZero ? '1' : '0'
+      let code = (countOne > countZero) ? '1' : '0'
+      finalCode += code
     }
-    console.log(finalCode)
     return finalCode
   }
 
@@ -41,9 +41,6 @@ export default class Kircher {
     const squareSize = parseInt(width / qrCodeSize)
     console.log('squareSize: ' + squareSize)
     const repeatEncoding = 1
-
-    const maxArea = squareSize ** 2
-    const minArea = parseInt(maxArea / 15)
 
     // just for testing!
     const maxSizeEncoded = parseInt(qrCodeSize * qrCodeSize / repeatEncoding)
@@ -85,44 +82,27 @@ export default class Kircher {
         let contours = new cv.MatVector()
         let hierarchy = new cv.Mat()
         cv.findContours(squareBit, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+        let contour = this.__filterContours(contours)
+        let code = {
+          value: '0',
+          probability: 0
+        }
+        if (contour) {
+          let line = new cv.Mat()
+          cv.fitLine(contour, line, cv.DIST_L2, 0, 0.01, 0.01) // [vx,vy,x,y]
+          let vx = Math.abs(line.data32F[0])
+          let vy = Math.abs(line.data32F[1])
 
-        let countVert = 0
-        let countHor = 0
-
-        for (let i = 0; i < contours.size(); i++) {
-          let cnt = contours.get(i)
-          let area = cv.contourArea(cnt)
-          if (area > minArea) {
-            let line = new cv.Mat()
-            cv.fitLine(cnt, line, cv.DIST_L2, 0, 0.01, 0.01) // [vx,vy,x,y]
-            let vx = line.data32F[0]
-            let vy = line.data32F[1]
-            // let x = line.data32F[2]
-            // let y = line.data32F[3]
-
-            /*
-            let lefty = Math.round((-x * vy / vx) + y)
-            let righty = Math.round(((square.cols - x) * vy / vx) + y)
-            let point1 = new cv.Point(square.cols - 1, righty)
-            let point2 = new cv.Point(0, lefty)
-
-            let lineColor = new cv.Scalar(255, 0, 0)
-            cv.line(square, point1, point2, lineColor, 2, cv.LINE_AA, 0)
-            */
-            if (Math.abs(vx) > Math.abs(vy)) {
-              countHor += 1
-            } else {
-              countVert += 1
-            }
+          code = {
+            value: (vx > vy) ? '0' : '1',
+            probability: Math.max(vx, vy)
           }
         }
         // cv.imshow(`bw-threshold-1`, square)
-        let code = (countVert >= countHor) ? '0' : '1'
-        // cv.imshow(`bw-threshold-1`, square)
-        fullCode += code
+        fullCode.push(code)
 
         let n = row * qrCodeSize + col
-        if (!(encoding[n] === code)) {
+        if (!(encoding[n] === code.value)) {
           // console.log('wrong!!' + n)
           countError++
         }
@@ -131,6 +111,26 @@ export default class Kircher {
     fullCode = this.repair(fullCode, nRepair)
     console.log('number of errors: ' + countError + '/3600')
     return this.__decodeBinaryString(fullCode)
+  }
+
+  static __filterContours (contours) {
+    if (contours.size() === 0) {
+      return null
+    }
+    if (contours.size() === 1) {
+      return contours.get(0)
+    }
+    let maxArea = 0
+    let maxContour = null
+    for (let i = 0; i < contours.size(); i++) {
+      let cnt = contours.get(i)
+      let area = cv.contourArea(cnt)
+      if (area > maxArea) {
+        maxArea = area
+        maxContour = cnt
+      }
+    }
+    return maxContour
   }
 
   static __decodeBinaryString (s) {
