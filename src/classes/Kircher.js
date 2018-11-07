@@ -34,7 +34,7 @@ export default class Kircher {
 
     console.log(width + 'x' + height)
     if (height !== width) {
-      console.log('grayImage is not a square!')
+      alert('grayImage is not a square! [' + width + 'x' + height + ']')
       return null
     }
 
@@ -135,6 +135,7 @@ export default class Kircher {
 
   static __decodeBinaryString (s) {
     if (!s || !s.length) {
+      alert('no code!')
       return null
     }
     let countBytes = parseInt(s.length / 8)

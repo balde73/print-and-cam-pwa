@@ -3,24 +3,24 @@
     <div class="modal-content">
       <div class="inline-input">
         <label>Repair number</label>
-        <input v-model.number="settings.nRepair" />
+        <input type="number" min="1" max="10" @change="$emit('nRepairChange')" v-model.number="settings.nRepair" />
       </div>
       <div class="inline-input">
         <label>Override light</label>
         <input type="checkbox" @change="toggleLight" v-model="settings.overrideLight" />
       </div>
-      <div class="inline-input">
+      <div class="inline-input" v-show="settings.overrideLight">
         <label>Initial light</label>
-        <input type="number" @change="$emit('changeInitialLight')" v-model.number="settings.basicLight" />
+        <input type="number" min="0" max="255" @change="$emit('changeInitialLight')" v-model.number="settings.basicLight" />
       </div>
       <div class="inline-input">
         <label>Light levels</label>
-        <input type="number" @change="$emit('changeLevels')" v-model.number="settings.levelsLight" />
+        <input type="number" min="1" @change="$emit('changeLevels')" v-model.number="settings.levelsLight" />
       </div>
       <div @click="$emit('closeSettings')" class="">
-        <button>
+        <div class="btn">
           CHIUDI
-        </button>
+        </div>
       </div>
     </div>
   </div>
@@ -69,6 +69,7 @@ export default {
 }
 .modal-content{
   width: 95%;
+  padding-top: 30vh;
   max-width: 350px;
   margin: 0 auto;
 }
@@ -78,6 +79,7 @@ export default {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  padding: 1rem;
 }
 label{
 
@@ -87,6 +89,13 @@ input{
   display: block;
   border: 0;
   border-bottom: 1px solid rgba(0,0,0,.1);
+}
+.btn{
+  border: 1px solid rgba(0,0,0,.2);
+  padding: 1rem;
+  text-align: center;
+  background-color: rgba(0,0,0,.1);
+  cursor: pointer;
 }
 </style>
 

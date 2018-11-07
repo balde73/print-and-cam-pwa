@@ -7,6 +7,7 @@
       v-on:startLight="startRecordingLight"
       v-on:changeLevels="changeLevelsLight"
       v-on:changeInitialLight="changeInitialLight"
+      v-on:nRepairChange="nRepairChange"
       v-on:closeSettings="closeSettings" />
     <div class="canvas-video">
       <video ref="video" id="videoInput" autoplay="true" playsinline></video>
@@ -71,10 +72,10 @@ export default {
       galleryFlash: false,
       imgElementSrc: null,
       settings: {
-        nRepair: 0,
+        nRepair: parseInt(this.$cookies.get('nRepair')) || 1,
         overrideLight: false,
-        basicLight: 0,
-        levelsLight: 5,
+        basicLight: parseInt(this.$cookies.get('basicLight')) || 70,
+        levelsLight: parseInt(this.$cookies.get('levelsLight')) || 5,
         galleryFlash: false
       },
       openSettings: false
@@ -214,13 +215,20 @@ export default {
       return code
     },
     changeLevelsLight () {
-      this.maskFinder.setLevels(this.settings.levelsLight)
+      const value = this.settings.levelsLight
+      this.$cookies.set('levelsLight', value)
+      this.maskFinder.setLevels(value)
     },
     changeInitialLight () {
-      this.maskFinder.setInitialLight(this.settings.basicLight)
+      const value = this.settings.basicLight
+      this.$cookies.set('basicLight', value)
+      this.maskFinder.setInitialLight(value)
     },
     closeSettings () {
       this.openSettings = false
+    },
+    nRepairChange () {
+      this.$cookies.set('nRepair', this.settings.nRepair)
     }
   }
 }
