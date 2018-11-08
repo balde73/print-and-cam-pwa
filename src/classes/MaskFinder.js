@@ -119,6 +119,7 @@ export default class MaskFinder {
     this.hsvVec = new cv.MatVector()
     this.hsvVec.push_back(this.hsv)
     this.frame = new cv.Mat(this.height, this.width, cv.CV_8UC4)
+    this.trackBox = null
     this.processVideo()
   }
 
@@ -137,13 +138,24 @@ export default class MaskFinder {
       // Apply meanshift to get the new location
       // and it also returns number of iterations meanShift took to converge,
       // which is useless in this demo.
-      let [, trackWindow] = cv.meanShift(this.dst, this.trackWindow, this.termCrit)
+      // let [, trackWindow] = cv.meanShift(this.dst, this.trackWindow, this.termCrit)
+
+      // apply camshift to get the new location
+      console.log(this.trackWindow)
+      let [trackBox, trackWindow] = cv.CamShift(this.dst, this.trackWindow, this.termCrit)
+      console.log(trackBox)
       console.log(trackWindow)
+      // this.trackBox = trackBox
       this.trackWindow = trackWindow
 
       // Draw it on image
-      let [x, y, w, h] = [this.trackWindow.x, this.trackWindow.y, this.trackWindow.width, this.trackWindow.height]
-      cv.rectangle(this.frame, new cv.Point(x, y), new cv.Point(x + w, y + h), [255, 0, 0, 255], 2)
+      // let pts = cv.rotatedRectPoints(trackBox)
+      let pts = cv.rotatedRectPoints(trackBox)
+      cv.line(this.frame, pts[0], pts[1], [255, 0, 0, 255], 3)
+      cv.line(this.frame, pts[1], pts[2], [255, 0, 0, 255], 3)
+      cv.line(this.frame, pts[2], pts[3], [255, 0, 0, 255], 3)
+      cv.line(this.frame, pts[3], pts[0], [255, 0, 0, 255], 3)
+
       cv.imshow('my-canvas-video', this.frame)
 
       // schedule the next one.
