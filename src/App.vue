@@ -18,7 +18,7 @@
         <div class="text">
           light: {{ settings.basicLight }} ({{ percLight }}%)
         </div>
-        <div class="icon">
+        <div class="icon" @click="trackImage">
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>barcode qr</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,10 1,10 1,1 10,1 10,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,10 14,10 14,1 14,1 23,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,23 1,23 1,14 10,14 10,14 "></polygon> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,19 23,14 19,14 19,17 15,17 15,14 "></polyline> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,23 15,23 15,21 "></polyline> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,6 5,6 5,5 6,5 6,6 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 19,6 18,6 18,6 18,5 19,5 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,19 5,19 5,18 6,18 6,19 "></polygon></g></svg>
         </div>
       </div>
@@ -30,6 +30,7 @@
         <RingButton @click.native="snapshot" active="is-magic" v-bind:status="isMagic" />
       </div>
     </div>
+    <canvas id="my-canvas-video" />
     <div class="">
       <div class="">
         Carica foto: <input @change="imgUpload" type="file" id="fileInput" name="file" />
@@ -177,7 +178,8 @@ export default {
       window.setTimeout(() => {
         let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
         this.capture.read(shot)
-        let mask = this.maskFinder.search(shot)
+        this.maskFinder.search(shot)
+        /*
         if (mask) {
           this.takeGalleryFlash()
           let code = Kircher.decode(mask, this.settings.nRepair)
@@ -185,6 +187,7 @@ export default {
           mask.delete()
         }
         this.isMagic = false
+        */
       }, 100)
     },
     async takeGalleryFlash () {
@@ -229,6 +232,9 @@ export default {
     },
     nRepairChange () {
       this.$cookies.set('nRepair', this.settings.nRepair)
+    },
+    trackImage () {
+      this.maskFinder.trackPortion()
     }
   }
 }
@@ -249,8 +255,6 @@ html, body{
 }
 video{
   background: black;
-  height: 100vh;
-  width: 100vw;
 }
 .canvas-video .point{
   position: absolute;

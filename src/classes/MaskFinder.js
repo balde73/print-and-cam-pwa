@@ -6,6 +6,7 @@ export default class MaskFinder {
     this.shot = new cv.Mat(this.height, this.width, cv.CV_8UC4)
     this.levels = levels
     this.initialLight = initialLight
+    this.mask = null
   }
   snapshot () {
     this.capture.read(this.shot)
@@ -39,6 +40,122 @@ export default class MaskFinder {
     this.shot.delete()
     return cropped
   }
+  shotAndTrack () {
+    this.capture.read(this.shot)
+    let orb = new cv.ORB()
+    let kp1 = new cv.KeyPointVector()
+    let des1 = new cv.Mat()
+    let kp2 = new cv.KeyPointVector()
+    let des2 = new cv.Mat()
+
+    console.log(this.mask)
+    console.log(this.shot)
+
+    orb.detectAndCompute(this.mask, new cv.Mat(), kp1, des1)
+    orb.detectAndCompute(this.shot, new cv.Mat(), kp2, des2)
+
+    console.log(kp1.size())
+    console.log(kp2.size())
+    try {
+      // create BFMatcher object
+      let bf = new cv.BFMatcher(cv.NORM_HAMMING, true)
+      console.log(bf)
+      // Match descriptors.
+      // let matches = new cv.MatVector()
+      // bf.match(des1, des2, matches)
+      // console.log(matches)
+      // Sort them in the order of their distance.
+      // matches = sorted(matches, key = lambda x:x.distance)
+      // Draw first 10 matches.
+      // img3 = cv.drawMatches(img1,kp1,img2,kp2,matches[:10], flags=2)
+      // plt.imshow(img3),plt.show()
+    } catch (e) {
+      console.log(e)
+    }
+  }
+  trackPortion (shotFreeze, x1, y1, x2, y2) {
+    console.log('start tracking')
+    console.log(x1 + ' ' + y1 + ' ' + x2 + ' ' + y2)
+    // take first frame of the video
+
+    console.log(shotFreeze)
+    let heightRect = y2 - y1
+    let widthRect = x2 - x1
+
+    // hardcode the initial location of window
+    this.trackWindow = new cv.Rect(x1, y1, widthRect, heightRect)
+    console.log(this.trackWindow)
+
+    // set up the ROI for tracking
+    let roi = shotFreeze.roi(this.trackWindow)
+    let hsvRoi = new cv.Mat()
+    cv.cvtColor(roi, hsvRoi, cv.COLOR_RGBA2RGB)
+    cv.cvtColor(hsvRoi, hsvRoi, cv.COLOR_RGB2HSV)
+    let mask = new cv.Mat()
+    let lowScalar = new cv.Scalar(30, 30, 0)
+    let highScalar = new cv.Scalar(180, 180, 180)
+    let low = new cv.Mat(hsvRoi.rows, hsvRoi.cols, hsvRoi.type(), lowScalar)
+    let high = new cv.Mat(hsvRoi.rows, hsvRoi.cols, hsvRoi.type(), highScalar)
+    cv.inRange(hsvRoi, low, high, mask)
+    this.roiHist = new cv.Mat()
+    let hsvRoiVec = new cv.MatVector()
+    hsvRoiVec.push_back(hsvRoi)
+    cv.calcHist(hsvRoiVec, [0], mask, this.roiHist, [180], [0, 180])
+    cv.normalize(this.roiHist, this.roiHist, 0, 255, cv.NORM_MINMAX)
+
+    // delete useless mats.
+    roi.delete()
+    hsvRoi.delete()
+    mask.delete()
+    low.delete()
+    high.delete()
+    hsvRoiVec.delete()
+
+    // Setup the termination criteria, either 10 iteration or move by atleast 1 pt
+    this.termCrit = new cv.TermCriteria(cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1)
+
+    this.hsv = new cv.Mat(this.height, this.width, cv.CV_8UC3)
+    this.dst = new cv.Mat()
+    this.hsvVec = new cv.MatVector()
+    this.hsvVec.push_back(this.hsv)
+    this.frame = new cv.Mat(this.height, this.width, cv.CV_8UC4)
+    this.processVideo()
+  }
+
+  processVideo () {
+    console.log('processing')
+    const FPS = 60
+    try {
+      let begin = Date.now()
+
+      // start processing.
+      this.capture.read(this.frame)
+      cv.cvtColor(this.frame, this.hsv, cv.COLOR_RGBA2RGB)
+      cv.cvtColor(this.hsv, this.hsv, cv.COLOR_RGB2HSV)
+      cv.calcBackProject(this.hsvVec, [0], this.roiHist, this.dst, [0, 180], 1)
+
+      // Apply meanshift to get the new location
+      // and it also returns number of iterations meanShift took to converge,
+      // which is useless in this demo.
+      let [, trackWindow] = cv.meanShift(this.dst, this.trackWindow, this.termCrit)
+      console.log(trackWindow)
+      this.trackWindow = trackWindow
+
+      // Draw it on image
+      let [x, y, w, h] = [this.trackWindow.x, this.trackWindow.y, this.trackWindow.width, this.trackWindow.height]
+      cv.rectangle(this.frame, new cv.Point(x, y), new cv.Point(x + w, y + h), [255, 0, 0, 255], 2)
+      cv.imshow('my-canvas-video', this.frame)
+
+      // schedule the next one.
+      let delay = 1000 / FPS - (Date.now() - begin)
+      setTimeout(() => {
+        this.processVideo()
+      }, delay)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
   search (photo) {
     const width = photo.cols
     const height = photo.rows
@@ -70,6 +187,13 @@ export default class MaskFinder {
       console.log('mask found!')
       this.__drawRect(bestMask)
       cropped = this.__crop(shotFreeze, bestMask)
+      this.mask = cropped
+
+      // start recording position
+      let rect = this.__exploitPoints(bestMask)
+      let {tl, br} = this.__orderPoints(rect)
+      console.log(rect)
+      this.trackPortion(shotFreeze, tl.x, tl.y, br.x, br.y)
     } else {
       console.log('nothing found')
       this.__cleanRect(bestMask)
@@ -241,7 +365,7 @@ export default class MaskFinder {
     // such that the first entry in the list is the top-left,
     // the second entry is the top-right, the third is the
     // bottom-right, and the fourth is the bottom-left
-    // rect = np.zeros((4, 2), dtype = "float32")
+    // rect = np.zeros((4, 2), dtype = 'float32')
 
     let points = pts.slice()
     points.sort(this.__sortPntY)
@@ -295,7 +419,7 @@ export default class MaskFinder {
     const maxHeight = Math.max(parseInt(heightA), parseInt(heightB))
 
     // now that we have the dimensions of the new image, construct
-    // the set of destination points to obtain a "birds eye view",
+    // the set of destination points to obtain a 'birds eye view',
     // (i.e. top-down view) of the image, again specifying points
     // in the top-left, top-right, bottom-right, and bottom-left
     // order
