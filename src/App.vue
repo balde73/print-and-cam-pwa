@@ -94,6 +94,7 @@ export default {
         levelsLight: parseInt(this.$cookies.get('levelsLight')) || 5,
         galleryFlash: false
       },
+      timeoutTracking: null,
       point: {
         x: 0,
         y: 0
@@ -225,26 +226,29 @@ export default {
       window.setTimeout(() => {
         let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
         this.capture.read(shot)
-        this.maskFinder.search(shot)
-        this.startTracking()
-        /*
+        let mask = this.maskFinder.search(shot)
         if (mask) {
+          this.startTracking()
           this.takeGalleryFlash()
-          let code = Kircher.decode(mask, this.settings.nRepair)
-          alert(code)
+          // let code = Kircher.decode(mask, this.settings.nRepair)
+          // alert(code)
           mask.delete()
+        } else {
+          this.stopTracking()
         }
         this.isMagic = false
-        */
       }, 100)
     },
     startTracking () {
       let point = this.maskFinder.processVideo()
       console.log(point)
       this.point = point
-      window.setTimeout(() => {
+      this.timeoutTracking = window.setTimeout(() => {
         this.startTracking()
       }, 1)
+    },
+    stopTracking () {
+      window.clearTimeout(this.timeoutTracking)
     },
     async takeGalleryFlash () {
       this.galleryFlash = true
@@ -326,7 +330,7 @@ video{
   position: absolute;
   top: 50%;
   left: 50%;
-  z-index: 1000;
+  z-index: 100;
   background-color: rgba(0,0,0,.2);
 }
 .point{
@@ -352,7 +356,8 @@ video{
   justify-content: space-between;
   align-items: center;
   color: #9369ff;
-  background-color: rgba(0,0,0,.4)
+  background-color: rgba(0,0,0,.4);
+  z-index: 300;
 }
 .pre-controls .icon{
   padding: 0 2rem;
@@ -369,7 +374,8 @@ video{
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,.9)
+  background: rgba(0,0,0,.9);
+  z-index: 300;
 }
 .gallery{
   margin: 2vh;
