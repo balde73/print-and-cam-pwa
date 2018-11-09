@@ -17,7 +17,15 @@
           marginTop: - this.realVideoDim.height / 2 + 'px',
           marginLeft: - this.realVideoDim.width / 2 + 'px',
         }">
-        <div class="point" v-bind:style="{ left: point.x + '%', top: point.y + '%' }"></div>
+        <div class="point"
+          v-bind:style="{ left: point.x + '%', top: point.y + '%' }"
+          :class="{'is-tracking': isTracking}"
+          @click="showMessage=!showMessage"
+          >
+          <div class="tooltip" v-show="showMessage">
+            Messsaggio: {{ message }}
+          </div>
+        </div>
       </div>
       <video ref="video" id="videoInput" class="maxCanvasSize" autoplay="true" playsinline></video>
       <div class="pre-controls">
@@ -96,14 +104,16 @@ export default {
       },
       timeoutTracking: null,
       point: {
-        x: 0,
-        y: 0
+        x: 50,
+        y: 50
       },
       realVideoDim: {
         width: 0,
         height: 0
       },
-      openSettings: false
+      openSettings: false,
+      message: '',
+      showMessage: false
     }
   },
   mounted () {
@@ -230,8 +240,7 @@ export default {
         if (mask) {
           this.startTracking()
           this.takeGalleryFlash()
-          // let code = Kircher.decode(mask, this.settings.nRepair)
-          // alert(code)
+          this.message = Kircher.decode(mask, this.settings.nRepair)
           mask.delete()
         } else {
           this.stopTracking()
@@ -240,6 +249,7 @@ export default {
       }, 100)
     },
     startTracking () {
+      this.isTracking = true
       let point = this.maskFinder.processVideo()
       console.log(point)
       this.point = point
@@ -248,6 +258,7 @@ export default {
       }, 1)
     },
     stopTracking () {
+      this.isTracking = false
       window.clearTimeout(this.timeoutTracking)
     },
     async takeGalleryFlash () {
@@ -335,14 +346,37 @@ video{
 }
 .point{
   position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-left: -50px;
+  margin-top: -50px;
+  height: 100px;
+  width: 100px;
+  background-color: rgba(0,0,0,.05);
+}
+.point:after{
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -10px;
+  margin-left: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 100%;
+  background-color: lightgray;
+  opacity: .2;
+}
+.point.is-tracking:after{
+  background-color: greenyellow;
+  opacity: 1;
+}
+.point .tooltip{
+  position: absolute;
   top: 0;
   left: 0;
-  height: 20px;
-  width: 20px;
-  border-radius: 100%;
-  background-color: greenyellow;
-  -webkit-transition: .1s linear;
-  transition: .1s linear;
+  padding: 1rem;
+  background: white;
 }
 .pre-controls{
   position: absolute;
