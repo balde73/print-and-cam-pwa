@@ -40,6 +40,32 @@ export default class MaskFinder {
     this.shot.delete()
     return cropped
   }
+  easyTrack () {
+    try {
+      let src = new cv.Mat(this.height, this.width, cv.CV_8UC4)
+      this.capture.read(src)
+      let dst = new cv.Mat()
+      let mask = new cv.Mat()
+      cv.matchTemplate(src, this.trackMat, dst, cv.TM_CCOEFF, mask)
+      let result = cv.minMaxLoc(dst, mask)
+      console.log(result)
+      let maxPoint = result.maxLoc
+
+      src.delete()
+      dst.delete()
+      mask.delete()
+
+      return {
+        point: {
+          x: maxPoint.x,
+          y: maxPoint.y
+        },
+        value: 1
+      }
+    } catch (e) {
+      console.log(e)
+    }
+  }
   shotAndTrack () {
     this.capture.read(this.shot)
     let orb = new cv.ORB()
@@ -120,28 +146,24 @@ export default class MaskFinder {
     this.hsvVec.push_back(this.hsv)
     this.frame = new cv.Mat(this.height, this.width, cv.CV_8UC4)
     this.trackBox = null
-    this.processVideo()
   }
 
   processVideo () {
     console.log('processing')
-    const FPS = 60
     try {
-      let begin = Date.now()
-
       // start processing.
       this.capture.read(this.frame)
       cv.cvtColor(this.frame, this.hsv, cv.COLOR_RGBA2RGB)
       cv.cvtColor(this.hsv, this.hsv, cv.COLOR_RGB2HSV)
-      cv.calcBackProject(this.hsvVec, [0], this.roiHist, this.dst, [0, 180], 1)
 
+      console.log(this.hsvVec)
+      cv.calcBackProject(this.hsvVec, [0], this.roiHist, this.dst, [0, 180], 1)
       // Apply meanshift to get the new location
       // and it also returns number of iterations meanShift took to converge,
       // which is useless in this demo.
       // let [, trackWindow] = cv.meanShift(this.dst, this.trackWindow, this.termCrit)
 
       // apply camshift to get the new location
-      console.log(this.trackWindow)
       let [trackBox, trackWindow] = cv.CamShift(this.dst, this.trackWindow, this.termCrit)
       console.log(trackBox)
       console.log(trackWindow)
@@ -150,19 +172,8 @@ export default class MaskFinder {
 
       // Draw it on image
       // let pts = cv.rotatedRectPoints(trackBox)
-      let pts = cv.rotatedRectPoints(trackBox)
-      cv.line(this.frame, pts[0], pts[1], [255, 0, 0, 255], 3)
-      cv.line(this.frame, pts[1], pts[2], [255, 0, 0, 255], 3)
-      cv.line(this.frame, pts[2], pts[3], [255, 0, 0, 255], 3)
-      cv.line(this.frame, pts[3], pts[0], [255, 0, 0, 255], 3)
-
-      cv.imshow('my-canvas-video', this.frame)
-
-      // schedule the next one.
-      let delay = 1000 / FPS - (Date.now() - begin)
-      setTimeout(() => {
-        this.processVideo()
-      }, delay)
+      // let pts = cv.rotatedRectPoints(trackBox)
+      return trackBox.center
     } catch (err) {
       console.log(err)
     }
@@ -198,13 +209,12 @@ export default class MaskFinder {
     if (bestMask) {
       console.log('mask found!')
       this.__drawRect(bestMask)
-      cropped = this.__crop(shotFreeze, bestMask)
-      this.mask = cropped
-
-      // start recording position
       let rect = this.__exploitPoints(bestMask)
-      let {tl, br} = this.__orderPoints(rect)
-      console.log(rect)
+      rect = this.__orderPoints(rect)
+      cropped = this.__crop(shotFreeze, rect)
+      console.log('cropped')
+      this.mask = cropped
+      let {tl, br} = rect
       this.trackPortion(shotFreeze, tl.x, tl.y, br.x, br.y)
     } else {
       console.log('nothing found')
@@ -407,11 +417,9 @@ export default class MaskFinder {
     return rect
   }
 
-  __fourPointTransform (image, pts) {
+  __fourPointTransform (image, rect) {
     // obtain a consistent order of the points and unpack them individually
     // rect = __orderPoints(pts)
-    let rect = this.__exploitPoints(pts)
-    rect = this.__orderPoints(rect)
 
     let {tl, tr, br, bl} = rect
     let origin = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y])

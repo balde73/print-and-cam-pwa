@@ -10,7 +10,8 @@
       v-on:nRepairChange="nRepairChange"
       v-on:closeSettings="closeSettings" />
     <div class="canvas-video">
-      <video ref="video" id="videoInput" autoplay="true" playsinline></video>
+      <video ref="video" id="videoInput" class="maxCanvasSize" autoplay="true" playsinline></video>
+      <div class="point" v-bind:style="{ left: point.x + 'px', top: point.y + 'px' }"></div>
       <div class="pre-controls">
         <div class="icon" @click="openSettings = true">
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>preferences</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="4" x2="23" y2="4"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="4" x2="4" y2="4"></line> <rect x="4" y="1" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="22" y1="12" x2="23" y2="12"></line> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="1" y1="12" x2="14" y2="12"></line> <rect data-color="color-2" x="14" y="9" fill="none" stroke-miterlimit="10" width="4" height="6"></rect> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="20" x2="23" y2="20"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="20" x2="4" y2="20"></line> <rect x="4" y="17" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect></g></svg>
@@ -30,7 +31,11 @@
         <RingButton @click.native="snapshot" active="is-magic" v-bind:status="isMagic" />
       </div>
     </div>
-    <canvas id="my-canvas-video" />
+    <canvas class="maxCanvasSize" id="my-canvas-video" />
+    <canvas class="maxCanvasSize" id="my-canvas-video-1" />
+    <canvas class="maxCanvasSize" id="my-canvas-video-2" />
+    <canvas class="maxCanvasSize" id="my-canvas-video-3" />
+    <button @click="step">Step</button>
     <div class="">
       <div class="">
         Carica foto: <input @change="imgUpload" type="file" id="fileInput" name="file" />
@@ -78,6 +83,10 @@ export default {
         basicLight: parseInt(this.$cookies.get('basicLight')) || 70,
         levelsLight: parseInt(this.$cookies.get('levelsLight')) || 5,
         galleryFlash: false
+      },
+      point: {
+        x: 0,
+        y: 0
       },
       openSettings: false
     }
@@ -142,10 +151,10 @@ export default {
       const totalPixels = this.video.height * this.video.width
       const perc = parseInt(whitePixels / totalPixels * 100)
       this.percLight = perc
-      if (perc < 20 && this.settings.basicLight > 10) {
-        this.settings.basicLight -= 10
-      } else if (perc > 30 && this.settings.basicLight < 200) {
-        this.settings.basicLight += 10
+      if (perc < 35 && this.settings.basicLight > 10) {
+        this.settings.basicLight -= 3
+      } else if (perc > 40 && this.settings.basicLight < 200) {
+        this.settings.basicLight += 5
       } else {
         // good light!
         this.maskFinder.setInitialLight(this.settings.basicLight)
@@ -179,6 +188,7 @@ export default {
         let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
         this.capture.read(shot)
         this.maskFinder.search(shot)
+        this.startTracking()
         /*
         if (mask) {
           this.takeGalleryFlash()
@@ -189,6 +199,13 @@ export default {
         this.isMagic = false
         */
       }, 100)
+    },
+    startTracking () {
+      let point = this.maskFinder.processVideo()
+      this.point = point
+      window.setTimeout(() => {
+        this.startTracking()
+      }, 1)
     },
     async takeGalleryFlash () {
       this.galleryFlash = true
@@ -235,6 +252,9 @@ export default {
     },
     trackImage () {
       this.maskFinder.trackPortion()
+    },
+    step () {
+      this.maskFinder.processVideo()
     }
   }
 }
@@ -253,6 +273,12 @@ html, body{
   background-color: black;
   position: relative;
 }
+.maxCanvasSize{
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: 0 auto;
+  display: block;
+}
 video{
   background: black;
 }
@@ -262,8 +288,8 @@ video{
   width: 10px;
   border-radius: 100%;
   background-color: greenyellow;
-  -webkit-transition: .5s linear;
-  transition: .5s linear;
+  -webkit-transition: .1s linear;
+  transition: .1s linear;
 }
 .pre-controls{
   position: absolute;
@@ -277,7 +303,7 @@ video{
   justify-content: space-between;
   align-items: center;
   color: #9369ff;
-  background-color: rgba(0,0,0,.7)
+  background-color: rgba(0,0,0,.4)
 }
 .pre-controls .icon{
   padding: 0 2rem;
