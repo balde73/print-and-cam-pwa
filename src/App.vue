@@ -10,8 +10,16 @@
       v-on:nRepairChange="nRepairChange"
       v-on:closeSettings="closeSettings" />
     <div class="canvas-video">
+      <div class="real-canvas-video maxCanvasSize"
+        v-bind:style="{
+          width: this.realVideoDim.width + 'px',
+          height: this.realVideoDim.height + 'px',
+          marginTop: - this.realVideoDim.height / 2 + 'px',
+          marginLeft: - this.realVideoDim.width / 2 + 'px',
+        }">
+        <div class="point" v-bind:style="{ left: point.x + '%', top: point.y + '%' }"></div>
+      </div>
       <video ref="video" id="videoInput" class="maxCanvasSize" autoplay="true" playsinline></video>
-      <div class="point" v-bind:style="{ left: point.x + 'px', top: point.y + 'px' }"></div>
       <div class="pre-controls">
         <div class="icon" @click="openSettings = true">
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>preferences</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="4" x2="23" y2="4"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="4" x2="4" y2="4"></line> <rect x="4" y="1" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="22" y1="12" x2="23" y2="12"></line> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="1" y1="12" x2="14" y2="12"></line> <rect data-color="color-2" x="14" y="9" fill="none" stroke-miterlimit="10" width="4" height="6"></rect> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="20" x2="23" y2="20"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="20" x2="4" y2="20"></line> <rect x="4" y="17" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect></g></svg>
@@ -68,6 +76,8 @@ export default {
     return {
       stream: null,
       video: null,
+      videoWidth: 0,
+      videoHeight: 0,
       capture: null,
       maskFinder: null,
       isRecording: false,
@@ -87,6 +97,10 @@ export default {
       point: {
         x: 0,
         y: 0
+      },
+      realVideoDim: {
+        width: 0,
+        height: 0
       },
       openSettings: false
     }
@@ -119,6 +133,10 @@ export default {
           this.video.onloadedmetadata = function () {
             self.video.height = this.videoHeight
             self.video.width = this.videoWidth
+            self.videoHeight = this.videoHeight
+            self.videoWidth = this.videoWidth
+            self.realVideoDim = self.videoDimensions(self.video)
+            console.log(self.realVideoDim)
 
             self.capture = new cv.VideoCapture(self.video)
             self.maskFinder = new MaskFinder(self.capture, self.settings.levelsLight)
@@ -130,6 +148,26 @@ export default {
         }
       } else {
         alert('browser o dispositivo non supportato!')
+      }
+    },
+    videoDimensions (video) {
+      // Ratio of the video's intrisic dimensions
+      let videoRatio = video.videoWidth / video.videoHeight
+      console.log(videoRatio)
+      // The width and height of the video element
+      let width = video.offsetWidth
+      let height = video.offsetHeight
+      // The ratio of the element's width to its height
+      let elementRatio = width / height
+      // If the video element is short and wide
+      if (elementRatio > videoRatio) {
+        width = height * videoRatio
+      } else {
+        height = width / videoRatio
+      }
+      return {
+        width: width,
+        height: height
       }
     },
     toggleAnalyzeLight () {
@@ -202,6 +240,7 @@ export default {
     },
     startTracking () {
       let point = this.maskFinder.processVideo()
+      console.log(point)
       this.point = point
       window.setTimeout(() => {
         this.startTracking()
@@ -272,6 +311,7 @@ html, body{
 .canvas-video{
   background-color: black;
   position: relative;
+  max-height: 100vh;
 }
 .maxCanvasSize{
   max-width: 100vw;
@@ -282,10 +322,19 @@ html, body{
 video{
   background: black;
 }
-.canvas-video .point{
+.real-canvas-video{
   position: absolute;
-  height: 10px;
-  width: 10px;
+  top: 50%;
+  left: 50%;
+  z-index: 1000;
+  background-color: rgba(0,0,0,.2);
+}
+.point{
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 20px;
+  width: 20px;
   border-radius: 100%;
   background-color: greenyellow;
   -webkit-transition: .1s linear;

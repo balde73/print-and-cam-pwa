@@ -173,7 +173,10 @@ export default class MaskFinder {
       // Draw it on image
       // let pts = cv.rotatedRectPoints(trackBox)
       // let pts = cv.rotatedRectPoints(trackBox)
-      return trackBox.center
+      return {
+        x: trackBox.center.x / this.width * 100,
+        y: trackBox.center.y / this.height * 100
+      }
     } catch (err) {
       console.log(err)
     }
