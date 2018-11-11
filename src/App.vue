@@ -112,8 +112,9 @@ export default {
         height: 0
       },
       openSettings: false,
-      message: '',
-      showMessage: false
+      message: null,
+      showMessage: false,
+      isTracking: false
     }
   },
   mounted () {
@@ -190,28 +191,40 @@ export default {
     },
     analyzeLight () {
       let timeRefresh = 10
+      let stop = false
       const lightIntensity = parseInt(this.settings.basicLight)
       let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(tmp)
       cv.cvtColor(tmp, tmp, cv.COLOR_RGBA2GRAY, 0)
       cv.threshold(tmp, tmp, lightIntensity, 255, cv.THRESH_BINARY)
       const whitePixels = cv.countNonZero(tmp)
-      tmp.delete()
       const totalPixels = this.video.height * this.video.width
       const perc = parseInt(whitePixels / totalPixels * 100)
       this.percLight = perc
-      if (perc < 35 && this.settings.basicLight > 10) {
-        this.settings.basicLight -= 3
-      } else if (perc > 40 && this.settings.basicLight < 200) {
+      if (perc < 30 && this.settings.basicLight > 10) {
+        this.settings.basicLight -= 8
+      } else if (perc > 35 && this.settings.basicLight < 200) {
         this.settings.basicLight += 5
       } else {
         // good light!
         this.maskFinder.setInitialLight(this.settings.basicLight)
-        timeRefresh = 1000
+        this.snapshot()
+        if (this.message) {
+          stop = true
+        } else {
+          timeRefresh = 1000
+        }
       }
-      this.timer = window.setTimeout(() => {
-        this.analyzeLight()
-      }, timeRefresh)
+
+      cv.imshow('my-canvas-video', tmp)
+
+      tmp.delete()
+
+      if (!stop) {
+        this.timer = window.setTimeout(() => {
+          this.analyzeLight()
+        }, timeRefresh)
+      }
     },
     stopAnalyzeLight () {
       console.log('stop!')
@@ -238,11 +251,15 @@ export default {
         this.capture.read(shot)
         let mask = this.maskFinder.search(shot)
         if (mask) {
-          this.startTracking()
           this.takeGalleryFlash()
-          this.message = Kircher.decode(mask, this.settings.nRepair)
+          this.stopTracking()
+          this.startTracking()
+          if (!this.message) {
+            this.message = Kircher.decode(mask, this.settings.nRepair)
+          }
           mask.delete()
         } else {
+          this.message = null
           this.stopTracking()
         }
         this.isMagic = false
@@ -250,9 +267,7 @@ export default {
     },
     startTracking () {
       this.isTracking = true
-      let point = this.maskFinder.processVideo()
-      console.log(point)
-      this.point = point
+      this.point = this.maskFinder.processVideo()
       this.timeoutTracking = window.setTimeout(() => {
         this.startTracking()
       }, 1)
@@ -262,10 +277,13 @@ export default {
       window.clearTimeout(this.timeoutTracking)
     },
     async takeGalleryFlash () {
-      this.galleryFlash = true
-      window.setTimeout(() => {
-        this.galleryFlash = false
-      }, 300)
+      return new Promise((resolve) => {
+        this.galleryFlash = true
+        window.setTimeout(() => {
+          this.galleryFlash = false
+          resolve()
+        }, 300)
+      })
     },
     imgUpload (e) {
       const file = e.target.files[0]

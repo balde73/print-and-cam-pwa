@@ -78,11 +78,13 @@ export default class Kircher {
 
         let squareBit = new cv.Mat(squareSize, squareSize, cv.CV_8UC4)
         cv.threshold(square, squareBit, avg, 255, cv.THRESH_BINARY_INV)
+
         // square_bit = cv.subtract(square_bit, focus_bw) TODO: implement this!
         let contours = new cv.MatVector()
         let hierarchy = new cv.Mat()
         cv.findContours(squareBit, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
         let contour = this.__filterContours(contours)
+
         let code = {
           value: '0',
           probability: 0
@@ -97,9 +99,14 @@ export default class Kircher {
             value: (vx > vy) ? '1' : '0',
             probability: Math.max(vx, vy)
           }
+          line.delete()
         }
-        // cv.imshow(`bw-threshold-1`, square)
         fullCode.push(code)
+
+        hierarchy.delete()
+        contours.delete()
+        squareBit.delete()
+        square.delete()
 
         let n = row * qrCodeSize + col
         if (!(encoding[n] === code.value)) {

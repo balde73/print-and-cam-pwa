@@ -22,8 +22,8 @@ export default class MaskFinder {
     let light = this.initialLight
     const steps = this.levels
     // const maxStep = parseInt((255 - light) / 3 * 2)
-    const maxStep = Math.min(255, light + steps * 5)
-    console.log(light + steps * 5)
+    const maxStep = Math.min(255, light + steps * 10)
+    console.log(light + steps * 10)
     const step = parseInt((maxStep - light) / steps)
     let lightLevels = []
     for (let i = 0; i < this.levels; i++) {
@@ -126,7 +126,7 @@ export default class MaskFinder {
     this.roiHist = new cv.Mat()
     let hsvRoiVec = new cv.MatVector()
     hsvRoiVec.push_back(hsvRoi)
-    cv.calcHist(hsvRoiVec, [0], mask, this.roiHist, [180], [0, 180])
+    cv.calcHist(hsvRoiVec, [2], mask, this.roiHist, [180], [0, 180])
     cv.normalize(this.roiHist, this.roiHist, 0, 255, cv.NORM_MINMAX)
 
     // delete useless mats.
@@ -149,30 +149,25 @@ export default class MaskFinder {
   }
 
   processVideo () {
-    console.log('processing')
+    console.log('> processing')
     try {
       // start processing.
       this.capture.read(this.frame)
       cv.cvtColor(this.frame, this.hsv, cv.COLOR_RGBA2RGB)
       cv.cvtColor(this.hsv, this.hsv, cv.COLOR_RGB2HSV)
 
-      console.log(this.hsvVec)
-      cv.calcBackProject(this.hsvVec, [0], this.roiHist, this.dst, [0, 180], 1)
+      // console.log(this.hsvVec)
+      cv.calcBackProject(this.hsvVec, [2], this.roiHist, this.dst, [0, 180], 1)
       // Apply meanshift to get the new location
       // and it also returns number of iterations meanShift took to converge,
       // which is useless in this demo.
       // let [, trackWindow] = cv.meanShift(this.dst, this.trackWindow, this.termCrit)
 
+      console.log(this.dst)
       // apply camshift to get the new location
       let [trackBox, trackWindow] = cv.CamShift(this.dst, this.trackWindow, this.termCrit)
-      console.log(trackBox)
-      console.log(trackWindow)
-      // this.trackBox = trackBox
       this.trackWindow = trackWindow
 
-      // Draw it on image
-      // let pts = cv.rotatedRectPoints(trackBox)
-      // let pts = cv.rotatedRectPoints(trackBox)
       return {
         x: trackBox.center.x / this.width * 100,
         y: trackBox.center.y / this.height * 100
@@ -275,6 +270,7 @@ export default class MaskFinder {
       }
     }
     myhull.push_back(best)
+    best.delete()
     return maxArea ? myhull : null
   }
   __filterContours (contours) {
