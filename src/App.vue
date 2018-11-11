@@ -191,7 +191,6 @@ export default {
     },
     analyzeLight () {
       let timeRefresh = 10
-      let stop = false
       const lightIntensity = parseInt(this.settings.basicLight)
       let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(tmp)
@@ -208,9 +207,8 @@ export default {
       } else {
         // good light!
         this.maskFinder.setInitialLight(this.settings.basicLight)
-        this.snapshot()
         if (this.message) {
-          stop = true
+          timeRefresh = 5000
         } else {
           timeRefresh = 1000
         }
@@ -220,11 +218,9 @@ export default {
 
       tmp.delete()
 
-      if (!stop) {
-        this.timer = window.setTimeout(() => {
-          this.analyzeLight()
-        }, timeRefresh)
-      }
+      this.timer = window.setTimeout(() => {
+        this.analyzeLight()
+      }, timeRefresh)
     },
     stopAnalyzeLight () {
       console.log('stop!')

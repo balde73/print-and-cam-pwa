@@ -126,7 +126,7 @@ export default class MaskFinder {
     this.roiHist = new cv.Mat()
     let hsvRoiVec = new cv.MatVector()
     hsvRoiVec.push_back(hsvRoi)
-    cv.calcHist(hsvRoiVec, [2], mask, this.roiHist, [180], [0, 180])
+    cv.calcHist(hsvRoiVec, [0], mask, this.roiHist, [180], [0, 180])
     cv.normalize(this.roiHist, this.roiHist, 0, 255, cv.NORM_MINMAX)
 
     // delete useless mats.
@@ -157,7 +157,7 @@ export default class MaskFinder {
       cv.cvtColor(this.hsv, this.hsv, cv.COLOR_RGB2HSV)
 
       // console.log(this.hsvVec)
-      cv.calcBackProject(this.hsvVec, [2], this.roiHist, this.dst, [0, 180], 1)
+      cv.calcBackProject(this.hsvVec, [0], this.roiHist, this.dst, [0, 180], 1)
       // Apply meanshift to get the new location
       // and it also returns number of iterations meanShift took to converge,
       // which is useless in this demo.
