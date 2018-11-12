@@ -383,6 +383,7 @@ export default {
     stopTracking () {
       console.log('>> STOP TRAKING')
       this.isTracking = false
+      this.message = null
       window.clearTimeout(this.timeoutTracking)
     },
     async takeGalleryFlash () {
