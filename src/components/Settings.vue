@@ -17,6 +17,10 @@
         <label>Light levels</label>
         <input type="number" min="1" max="20" @change="$emit('changeLevels')" v-model.number="settings.levelsLight" />
       </div>
+      <div class="inline-input">
+        <label>Max vibration</label>
+        <input type="number" min="1" max="200" @change="$emit('changeVibrations')" v-model.number="settings.maxVibration" />
+      </div>
       <div @click="$emit('closeSettings')" class="">
         <div class="btn">
           CHIUDI
@@ -67,7 +71,7 @@ export default {
 }
 .modal-content{
   width: 95%;
-  padding-top: 30vh;
+  padding-top: 20vh;
   max-width: 350px;
   margin: 0 auto;
 }

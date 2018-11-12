@@ -8,7 +8,8 @@
       v-on:changeLevels="changeLevelsLight"
       v-on:changeInitialLight="changeInitialLight"
       v-on:nRepairChange="nRepairChange"
-      v-on:closeSettings="closeSettings" />
+      v-on:closeSettings="closeSettings"
+      v-on:changeVibrations="changeVibrations" />
     <div class="canvas-video">
       <div class="real-canvas-video maxCanvasSize"
         v-bind:style="{
@@ -100,7 +101,8 @@ export default {
         overrideLight: false,
         basicLight: parseInt(this.$cookies.get('basicLight')) || 70,
         levelsLight: parseInt(this.$cookies.get('levelsLight')) || 5,
-        galleryFlash: false
+        galleryFlash: false,
+        maxVibration: parseInt(this.$cookies.get('maxVibration')) || 30
       },
       timeoutTracking: null,
       point: {
@@ -245,9 +247,9 @@ export default {
     },
     processMotion (event) {
       console.log(event)
-      const acc = event.acceleration.x + event.acceleration.y + event.acceleration.z
+      const acc = Math.abs(event.acceleration.x) + Math.abs(event.acceleration.y) + Math.abs(event.acceleration.z)
       const percAcc = parseInt(acc * 100)
-      if (percAcc < 20 && percAcc > -20) {
+      if (percAcc < this.maxVibration) {
         this.gyroscope.still += 1
         if (this.gyroscope.still > 50) {
           this.stopMotionListener()
@@ -392,6 +394,10 @@ export default {
     },
     step () {
       this.maskFinder.processVideo()
+    },
+    changeVibrations () {
+      const value = this.settings.maxVibration
+      this.$cookies.set('maxVibration', value)
     }
   }
 }
