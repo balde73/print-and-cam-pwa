@@ -211,7 +211,6 @@ export default {
       }
     },
     analyzeLight () {
-      this.stopMotionListener()
       let timeRefresh = 50
       const lightIntensity = parseInt(this.settings.basicLight)
       let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
@@ -261,13 +260,15 @@ export default {
       window.removeEventListener('devicemotion', this.processMotion)
     },
     processMotion (event) {
-      this.suggestion = 'inquadra il codice'
       const acc = Math.abs(event.acceleration.x) + Math.abs(event.acceleration.y) + Math.abs(event.acceleration.z)
       const percAcc = parseInt(acc * 100)
+      if (!this.goodLight) {
+        return 0
+      }
       if (percAcc < this.settings.maxVibration) {
         this.gyroscope.still += 1
         if (this.gyroscope.still > 30) {
-          if (!this.isTracking && this.goodLight) {
+          if (!this.isTracking) {
             this.gyroscope.still = 0
             this.suggestion = 'sto scattando'
             this.searchMask()
@@ -275,6 +276,9 @@ export default {
         }
       } else {
         this.gyroscope.still = 0
+        if (!this.isTracking) {
+          this.suggestion = 'inquadra il codice'
+        }
       }
       this.gyroscope.acc = percAcc
     },
