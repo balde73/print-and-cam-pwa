@@ -190,7 +190,7 @@ export default {
       }
     },
     analyzeLight () {
-      let timeRefresh = 10
+      let timeRefresh = 50
       const lightIntensity = parseInt(this.settings.basicLight)
       let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(tmp)
@@ -206,14 +206,13 @@ export default {
         this.settings.basicLight += 5
       } else {
         // good light!
-        this.maskFinder.setInitialLight(this.settings.basicLight)
-        if (this.message) {
-          timeRefresh = 5000
-        } else {
-          timeRefresh = 1000
+        if (!this.isTracking) {
+          console.log('> SEARCH MASK')
+          this.maskFinder.setInitialLight(this.settings.basicLight)
+          this.searchMask()
         }
+        timeRefresh = 1500
       }
-
       cv.imshow('my-canvas-video', tmp)
 
       tmp.delete()
@@ -223,7 +222,7 @@ export default {
       }, timeRefresh)
     },
     stopAnalyzeLight () {
-      console.log('stop!')
+      console.log('stop light!')
       window.clearTimeout(this.timer)
       this.timer = null
     },
@@ -238,6 +237,17 @@ export default {
         this.stopRecording()
       } else {
         this.startRecordingLight()
+      }
+    },
+    searchMask () {
+      let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
+      this.capture.read(shot)
+      let rect = this.maskFinder.search(shot)
+      if (rect) {
+        let {tl, br} = rect
+        this.stopTracking()
+        this.maskFinder.studyPortion(shot, tl.x, tl.y, br.x, br.y)
+        this.startTracking()
       }
     },
     snapshot () {
@@ -262,13 +272,32 @@ export default {
       }, 100)
     },
     startTracking () {
+      console.log('> TRAKING')
       this.isTracking = true
       this.point = this.maskFinder.processVideo()
-      this.timeoutTracking = window.setTimeout(() => {
-        this.startTracking()
-      }, 1)
+      if (!this.point || this.nearEdge(this.point)) {
+        console.log('too near edge. Stopping')
+        this.stopTracking()
+      } else {
+        this.timeoutTracking = window.setTimeout(() => {
+          this.startTracking()
+        }, 1)
+      }
+    },
+    nearEdge (point) {
+      if (
+        point.x > 95 ||
+        point.x < 5 ||
+        point.y > 95 ||
+        point.y < 5
+      ) {
+        console.log(point)
+        return true
+      }
+      return false
     },
     stopTracking () {
+      console.log('>> STOP TRAKING')
       this.isTracking = false
       window.clearTimeout(this.timeoutTracking)
     },

@@ -99,7 +99,7 @@ export default class MaskFinder {
       console.log(e)
     }
   }
-  trackPortion (shotFreeze, x1, y1, x2, y2) {
+  studyPortion (shotFreeze, x1, y1, x2, y2) {
     console.log('start tracking')
     console.log(x1 + ' ' + y1 + ' ' + x2 + ' ' + y2)
     // take first frame of the video
@@ -114,9 +114,15 @@ export default class MaskFinder {
 
     // set up the ROI for tracking
     let roi = shotFreeze.roi(this.trackWindow)
+
+    cv.imshow('my-canvas-video-1', roi)
+
     let hsvRoi = new cv.Mat()
     cv.cvtColor(roi, hsvRoi, cv.COLOR_RGBA2RGB)
     cv.cvtColor(hsvRoi, hsvRoi, cv.COLOR_RGB2HSV)
+
+    cv.imshow('my-canvas-video-2', hsvRoi)
+
     let mask = new cv.Mat()
     let lowScalar = new cv.Scalar(30, 30, 0)
     let highScalar = new cv.Scalar(180, 180, 180)
@@ -203,6 +209,17 @@ export default class MaskFinder {
       cv.imshow(`bw-threshold-${i}`, tmp)
     }
 
+    tmp.delete()
+    gray.delete()
+    shotFreeze.delete()
+    if (bestMask) {
+      let rect = this.__exploitPoints(bestMask)
+      rect = this.__orderPoints(rect)
+      return rect
+    }
+    return null
+
+    /*
     let cropped = null
     if (bestMask) {
       console.log('mask found!')
@@ -218,10 +235,7 @@ export default class MaskFinder {
       console.log('nothing found')
       this.__cleanRect(bestMask)
     }
-    tmp.delete()
-    gray.delete()
-    shotFreeze.delete()
-    return cropped
+    */
   }
 
   // private methods
@@ -294,10 +308,9 @@ export default class MaskFinder {
     if (this.__farFromCentroid(contourRect)) {
       return false // shouldn't far from centroids (focus)
     }
-    /*
-      if __nearEdge(img, contourRect){
+    if (this.__nearEdge(contourRect)) {
       return false // shouldn't be too near edges
-    */
+    }
     if (this.__tooSmall(contourRect)) {
       return false // too small is bad
     }
