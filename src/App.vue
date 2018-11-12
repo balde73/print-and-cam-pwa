@@ -247,7 +247,7 @@ export default {
       console.log(event)
       const acc = event.acceleration.x + event.acceleration.y + event.acceleration.z
       const percAcc = parseInt(acc * 100)
-      if (percAcc < 10 && percAcc > -10) {
+      if (percAcc < 20 && percAcc > -20) {
         this.gyroscope.still += 1
         if (this.gyroscope.still > 50) {
           this.stopMotionListener()
