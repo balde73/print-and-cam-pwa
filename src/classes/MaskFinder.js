@@ -211,12 +211,28 @@ export default class MaskFinder {
 
     tmp.delete()
     gray.delete()
-    shotFreeze.delete()
     if (bestMask) {
-      let rect = this.__exploitPoints(bestMask)
+      const widthCnt = bestMask.rect.width
+      const heightCnt = bestMask.rect.height
+      const minSizeCnt = Math.min(widthCnt, heightCnt)
+      const minSize = Math.min(width, height)
+
+      const sizeRate = minSizeCnt / minSize
+      let rect = this.__exploitPoints(bestMask.cnt)
       rect = this.__orderPoints(rect)
-      return rect
+      let cropped = null
+      if (sizeRate > 0.8) {
+        console.log('sizeRate is good')
+        cropped = this.__crop(shotFreeze, rect)
+      }
+      shotFreeze.delete()
+      return {
+        cropped: cropped,
+        rect: rect,
+        sizeRate: sizeRate
+      }
     }
+    shotFreeze.delete()
     return null
 
     /*
@@ -257,54 +273,48 @@ export default class MaskFinder {
     let contours = new cv.MatVector()
     let hierarchy = new cv.Mat()
     cv.findContours(img, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    contours = this.__filterContours(contours)
-    return this.__getMask(contours)
+    return this.__bestContour(contours)
   }
 
-  __getMask (contours) {
-    let myhull = new cv.MatVector()
+  __bestContour (contours) {
+    let hull = new cv.MatVector()
     let best = new cv.Mat()
+    let bestRect = null
     let maxArea = 0
 
     for (let i = 0; i < contours.size(); ++i) {
-      let contour = contours.get(i)
-
-      // approximate the contour
-      let peri = cv.arcLength(contour, true)
-      let tmp = new cv.Mat()
-      cv.approxPolyDP(contour, tmp, 0.01 * peri, true)
-      if (tmp.matSize[0] === 4) {
-        // x, y, w, h = cv.boundingRect(contour)
-        let area = cv.contourArea(tmp)
-
-        if (area > maxArea) {
-          best = tmp
-          maxArea = area
-        }
-      }
-    }
-    myhull.push_back(best)
-    best.delete()
-    return maxArea ? myhull : null
-  }
-  __filterContours (contours) {
-    let hull = new cv.MatVector()
-    for (let i = 0; i < contours.size(); ++i) {
       let cnt = contours.get(i)
       // You can try more different parameters
-      if (this.__contourOK(cnt)) {
-        hull.push_back(cnt)
+      const contourRect = cv.boundingRect(cnt)
+      const elem = this.__contourOK(contourRect)
+      if (elem) {
+        let tmp = new cv.Mat()
+        let peri = cv.arcLength(cnt, true)
+        cv.approxPolyDP(cnt, tmp, 0.01 * peri, true)
+
+        if (tmp.matSize[0] === 4) {
+          let area = cv.contourArea(tmp)
+          if (area > maxArea) {
+            best = tmp.clone()
+            bestRect = contourRect
+            maxArea = area
+          }
+        }
+        tmp.delete()
       }
       cnt.delete()
     }
-    return hull
+    hull.push_back(best)
+    return maxArea ? {
+      rect: bestRect,
+      cnt: best
+    } : null
   }
-  __contourOK (contour) {
+  __contourOK (contourRect) {
     // #####################
     // Check if the contour is a good predictor of photo location.
     // #####################
 
-    const contourRect = cv.boundingRect(contour) // returning {x, y, width, height}
     if (this.__farFromCentroid(contourRect)) {
       return false // shouldn't far from centroids (focus)
     }
@@ -418,10 +428,9 @@ export default class MaskFinder {
     }
   }
 
-  __exploitPoints (matrix) {
+  __exploitPoints (points) {
     let rect = [[0, 0], [0, 0], [0, 0], [0, 0]]
 
-    const points = matrix.get(0)
     rect[0] = new cv.Point(points.data32S[0], points.data32S[1])
     rect[1] = new cv.Point(points.data32S[2], points.data32S[3])
     rect[2] = new cv.Point(points.data32S[4], points.data32S[5])

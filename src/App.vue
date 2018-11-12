@@ -222,8 +222,6 @@ export default {
       const perc = parseInt(whitePixels / totalPixels * 100)
       this.percLight = perc
 
-      this.suggestion = null
-
       if (perc < 20 && this.settings.basicLight > 10) {
         this.goodLight = false
         this.settings.basicLight -= 10
@@ -270,8 +268,10 @@ export default {
         if (this.gyroscope.still > 30) {
           if (!this.isTracking) {
             this.gyroscope.still = 0
-            this.suggestion = 'sto scattando'
             this.searchMask()
+          } else if (!this.message) {
+            this.gyroscope.still = 0
+            this.tryFullDecoding()
           }
         }
       } else {
@@ -310,27 +310,44 @@ export default {
       this.stopTracking()
       let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(shot)
-      let rect = this.maskFinder.search(shot)
-      if (rect) {
-        let {tl, br} = rect
+      let mask = this.maskFinder.search(shot)
+      if (mask) {
+        let {tl, br} = mask.rect
         this.maskFinder.studyPortion(shot, tl.x, tl.y, br.x, br.y)
         this.startTracking()
+        console.log(mask.sizeRate)
+        if (mask.cropped) {
+          cv.imshow('canvasTransform', mask.cropped)
+          mask.cropped.delete()
+        } else {
+          this.suggestion = 'avvicinati di più per decodificare'
+        }
+      }
+    },
+    tryFullDecoding () {
+      // the algorithm is still tracking the object
+      let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
+      this.capture.read(shot)
+      let mask = this.maskFinder.search(shot)
+      if (mask && mask.cropped) {
+        this.decodeImage(mask.cropped)
       }
     },
     snapshot () {
       this.isMagic = true
+      this.stopTracking()
       window.setTimeout(() => {
         let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
         this.capture.read(shot)
         let mask = this.maskFinder.search(shot)
         if (mask) {
-          this.takeGalleryFlash()
-          this.stopTracking()
+          console.log(mask)
+          let {tl, br} = mask.rect
+          this.maskFinder.studyPortion(shot, tl.x, tl.y, br.x, br.y)
           this.startTracking()
-          if (!this.message) {
-            this.message = Kircher.decode(mask, this.settings.nRepair)
+          if (mask.cropped) {
+            this.decodeImage(mask.cropped)
           }
-          mask.delete()
         } else {
           this.message = null
           this.stopTracking()
@@ -353,10 +370,10 @@ export default {
     },
     nearEdge (point) {
       if (
-        point.x > 95 ||
-        point.x < 5 ||
-        point.y > 95 ||
-        point.y < 5
+        point.x > 90 ||
+        point.x < 10 ||
+        point.y > 90 ||
+        point.y < 10
       ) {
         console.log(point)
         return true
@@ -381,6 +398,12 @@ export default {
       const file = e.target.files[0]
       this.imgElementSrc = URL.createObjectURL(file)
     },
+    decodeImage (image) {
+      this.takeGalleryFlash()
+      cv.imshow('canvasTransform', image)
+      this.message = Kircher.decode(image, this.settings.nRepair)
+      image.delete()
+    },
     readCode () {
       let image = cv.imread('imageSrc')
       let code = Kircher.decode(image, this.settings.nRepair)
@@ -393,7 +416,7 @@ export default {
       let croppedImage = this.maskFinder.search(image)
       let code = null
       if (croppedImage) {
-        code = Kircher.decode(croppedImage, this.settings.nRepair)
+        code = Kircher.decode(croppedImage.cropped, this.settings.nRepair)
       }
       alert(code)
       return code
