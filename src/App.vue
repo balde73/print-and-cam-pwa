@@ -97,6 +97,7 @@ export default {
       isRecording: false,
       isMagic: false,
       percLight: 0,
+      goodLight: false,
       timer: null,
       openCropImage: false,
       galleryFlash: false,
@@ -128,16 +129,6 @@ export default {
   },
   mounted () {
     this.startRecordingLight()
-
-    if (window.DeviceMotionEvent !== undefined) {
-      this.gyroscope = {
-        isMoving: true,
-        acc: 1,
-        still: 0
-      }
-    } else {
-      console.log('device motion not supported')
-    }
   },
   computed: {
     rangeLevels: function () {
@@ -176,6 +167,17 @@ export default {
           }
         } catch (error) {
           alert(error)
+        }
+
+        if (window.DeviceMotionEvent !== undefined) {
+          this.gyroscope = {
+            isMoving: true,
+            acc: 1,
+            still: 0
+          }
+          this.startMotionListener()
+        } else {
+          console.log('device motion not supported')
         }
       } else {
         alert('browser o dispositivo non supportato!')
@@ -224,28 +226,24 @@ export default {
       this.suggestion = null
 
       if (perc < 20 && this.settings.basicLight > 10) {
+        this.goodLight = false
         this.settings.basicLight -= 10
       } else if (perc > 25 && this.settings.basicLight < 200) {
+        this.goodLight = false
         this.settings.basicLight += 9
       } else {
         if (this.settings.basicLight < 10) {
+          this.goodLight = false
           this.suggestion = 'too dark'
         } else if (this.settings.basicLight > 200) {
+          this.goodLight = false
           this.suggestion = 'too light'
         } else {
           // good light!
-          if (!this.isTracking) {
-            console.log('> SEARCH MASK')
-            this.maskFinder.setInitialLight(this.settings.basicLight)
-            if (this.gyroscope) {
-              this.stopMotionListener()
-              this.startMotionListener()
-            } else {
-              this.suggestion = 'auto camera is off :('
-            }
-          }
+          this.goodLight = true
+          this.maskFinder.setInitialLight(this.settings.basicLight)
         }
-        timeRefresh = 3000
+        timeRefresh = 150
       }
       cv.imshow('my-canvas-video', tmp)
 
@@ -268,9 +266,12 @@ export default {
       const percAcc = parseInt(acc * 100)
       if (percAcc < this.settings.maxVibration) {
         this.gyroscope.still += 1
-        if (this.gyroscope.still > 20) {
-          this.stopMotionListener()
-          this.suggestion = 'sto scattando'
+        if (this.gyroscope.still > 30) {
+          if (!this.isTracking && this.goodLight) {
+            this.gyroscope.still = 0
+            this.suggestion = 'sto scattando'
+            this.searchMask()
+          }
         }
       } else {
         this.gyroscope.still = 0
@@ -288,6 +289,8 @@ export default {
     stopRecording () {
       this.isRecording = false
       this.stopAnalyzeLight()
+      this.stopTracking()
+      this.stopMotionListener()
       this.stream.getVideoTracks().forEach(function (track) {
         track.stop()
       })
@@ -300,12 +303,12 @@ export default {
       }
     },
     searchMask () {
+      this.stopTracking()
       let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(shot)
       let rect = this.maskFinder.search(shot)
       if (rect) {
         let {tl, br} = rect
-        this.stopTracking()
         this.maskFinder.studyPortion(shot, tl.x, tl.y, br.x, br.y)
         this.startTracking()
       }
