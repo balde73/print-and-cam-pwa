@@ -236,6 +236,7 @@ export default {
       }, timeRefresh)
     },
     startMotionListener () {
+      this.gyroscope.still = 0
       window.addEventListener('devicemotion', this.processMotion)
     },
     stopMotionListener () {
@@ -245,7 +246,7 @@ export default {
       console.log(event)
       const acc = event.acceleration.x + event.acceleration.y + event.acceleration.z
       const percAcc = parseInt(acc * 100)
-      if (acc < 10 && acc > -10) {
+      if (percAcc < 10 && percAcc > -10) {
         this.gyroscope.still += 1
       } else {
         this.gyroscope.still = 0
