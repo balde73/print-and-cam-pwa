@@ -215,9 +215,9 @@ export default {
       const perc = parseInt(whitePixels / totalPixels * 100)
       this.percLight = perc
       if (perc < 20 && this.settings.basicLight > 10) {
-        this.settings.basicLight -= 5
+        this.settings.basicLight -= 10
       } else if (perc > 25 && this.settings.basicLight < 200) {
-        this.settings.basicLight += 3
+        this.settings.basicLight += 9
       } else {
         // good light!
         if (!this.isTracking) {
@@ -249,9 +249,9 @@ export default {
       console.log(event)
       const acc = Math.abs(event.acceleration.x) + Math.abs(event.acceleration.y) + Math.abs(event.acceleration.z)
       const percAcc = parseInt(acc * 100)
-      if (percAcc < this.maxVibration) {
+      if (percAcc < this.settings.maxVibration) {
         this.gyroscope.still += 1
-        if (this.gyroscope.still > 50) {
+        if (this.gyroscope.still > 20) {
           this.stopMotionListener()
           alert('device still')
         }
