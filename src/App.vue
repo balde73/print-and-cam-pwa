@@ -18,6 +18,11 @@
           marginTop: - this.realVideoDim.height / 2 + 'px',
           marginLeft: - this.realVideoDim.width / 2 + 'px',
         }">
+        <div v-show="suggestion" class="suggestion">
+          <div class="text">
+            {{ suggestion }}
+          </div>
+        </div>
         <div class="point"
           v-bind:style="{ left: point.x + '%', top: point.y + '%' }"
           :class="{'is-tracking': isTracking}"
@@ -117,7 +122,8 @@ export default {
       message: null,
       showMessage: false,
       isTracking: false,
-      gyroscope: null
+      gyroscope: null,
+      suggestion: null
     }
   },
   mounted () {
@@ -214,21 +220,32 @@ export default {
       const totalPixels = this.video.height * this.video.width
       const perc = parseInt(whitePixels / totalPixels * 100)
       this.percLight = perc
+
+      this.suggestion = null
+
       if (perc < 20 && this.settings.basicLight > 10) {
         this.settings.basicLight -= 10
       } else if (perc > 25 && this.settings.basicLight < 200) {
         this.settings.basicLight += 9
       } else {
-        // good light!
-        if (!this.isTracking) {
-          console.log('> SEARCH MASK')
-          this.maskFinder.setInitialLight(this.settings.basicLight)
-          if (this.gyroscope) {
-            this.stopMotionListener()
-            this.startMotionListener()
+        if (this.settings.basicLight < 10) {
+          this.suggestion = 'too dark'
+        } else if (this.settings.basicLight > 200) {
+          this.suggestion = 'too light'
+        } else {
+          // good light!
+          if (!this.isTracking) {
+            console.log('> SEARCH MASK')
+            this.maskFinder.setInitialLight(this.settings.basicLight)
+            if (this.gyroscope) {
+              this.stopMotionListener()
+              this.startMotionListener()
+            } else {
+              this.suggestion = 'auto camera is off :('
+            }
           }
         }
-        timeRefresh = 5000
+        timeRefresh = 3000
       }
       cv.imshow('my-canvas-video', tmp)
 
@@ -246,14 +263,14 @@ export default {
       window.removeEventListener('devicemotion', this.processMotion)
     },
     processMotion (event) {
-      console.log(event)
+      this.suggestion = 'inquadra il codice'
       const acc = Math.abs(event.acceleration.x) + Math.abs(event.acceleration.y) + Math.abs(event.acceleration.z)
       const percAcc = parseInt(acc * 100)
       if (percAcc < this.settings.maxVibration) {
         this.gyroscope.still += 1
         if (this.gyroscope.still > 20) {
           this.stopMotionListener()
-          alert('device still')
+          this.suggestion = 'sto scattando'
         }
       } else {
         this.gyroscope.still = 0
@@ -270,6 +287,7 @@ export default {
     },
     stopRecording () {
       this.isRecording = false
+      this.stopAnalyzeLight()
       this.stream.getVideoTracks().forEach(function (track) {
         track.stop()
       })
@@ -432,6 +450,18 @@ video{
   left: 50%;
   z-index: 100;
   background-color: rgba(0,0,0,.2);
+}
+.real-canvas-video .suggestion{
+  position: absolute;
+  top: 1rem;
+  width: 100%;
+  text-align: center;
+}
+.real-canvas-video .suggestion .text{
+  padding: .5rem 1rem;
+  background-color: rgba(0,0,0,.5);
+  color: white;
+  display: inline-block;
 }
 .point{
   position: absolute;
