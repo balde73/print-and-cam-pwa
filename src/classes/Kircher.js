@@ -74,7 +74,7 @@ export default class Kircher {
         let rectCentroid = new cv.Rect(initPosCentroid, initPosCentroid, dimCenterSquare * 2, dimCenterSquare * 2)
         let centroid = square.roi(rectCentroid)
 
-        let avg = cv.mean(centroid)[0] // fix this. understand why 4 values instead of one
+        let avg = cv.mean(centroid)[0]
 
         let squareBit = new cv.Mat(squareSize, squareSize, cv.CV_8UC4)
         cv.threshold(square, squareBit, avg, 255, cv.THRESH_BINARY_INV)
