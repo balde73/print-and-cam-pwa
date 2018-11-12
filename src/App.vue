@@ -25,7 +25,7 @@
         </div>
         <div class="point"
           v-bind:style="{ left: point.x + '%', top: point.y + '%' }"
-          :class="{'is-tracking': isTracking}"
+          :class="{'is-tracking': isTracking, 'has-message': message}"
           @click="showMessage=!showMessage"
           >
           <div class="tooltip" v-show="showMessage">
@@ -225,20 +225,16 @@ export default {
       if (perc < 20 && this.settings.basicLight > 10) {
         this.goodLight = false
         this.settings.basicLight -= 10
-      } else if (perc > 25 && this.settings.basicLight < 200) {
+      } else if (perc > 25 && this.settings.basicLight < 240) {
         this.goodLight = false
         this.settings.basicLight += 9
       } else {
-        if (this.settings.basicLight < 10) {
-          this.goodLight = false
-          this.suggestion = 'too dark'
-        } else if (this.settings.basicLight > 200) {
-          this.goodLight = false
-          this.suggestion = 'too light'
-        } else {
-          // good light!
-          this.goodLight = true
-          this.maskFinder.setInitialLight(this.settings.basicLight)
+        this.goodLight = true
+        this.maskFinder.setInitialLight(this.settings.basicLight)
+        if (this.settings.basicLight <= 10) {
+          this.suggestion = 'probably too dark'
+        } else if (this.settings.basicLight >= 240) {
+          this.suggestion = 'probably too light'
         }
         timeRefresh = 150
       }
@@ -518,8 +514,11 @@ video{
   opacity: .2;
 }
 .point.is-tracking:after{
-  background-color: greenyellow;
+  background-color: orange;
   opacity: 1;
+}
+.point.is-tracking.has-message:after{
+  background-color: greenyellow;
 }
 .point .tooltip{
   position: absolute;
