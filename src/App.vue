@@ -222,6 +222,7 @@ export default {
           console.log('> SEARCH MASK')
           this.maskFinder.setInitialLight(this.settings.basicLight)
           if (this.gyroscope) {
+            this.stopMotionListener()
             this.startMotionListener()
           }
         }
@@ -248,6 +249,10 @@ export default {
       const percAcc = parseInt(acc * 100)
       if (percAcc < 10 && percAcc > -10) {
         this.gyroscope.still += 1
+        if (this.gyroscope.still > 50) {
+          this.stopMotionListener()
+          alert('device still')
+        }
       } else {
         this.gyroscope.still = 0
       }
