@@ -33,7 +33,7 @@
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>preferences</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="4" x2="23" y2="4"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="4" x2="4" y2="4"></line> <rect x="4" y="1" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="22" y1="12" x2="23" y2="12"></line> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="1" y1="12" x2="14" y2="12"></line> <rect data-color="color-2" x="14" y="9" fill="none" stroke-miterlimit="10" width="4" height="6"></rect> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="20" x2="23" y2="20"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="20" x2="4" y2="20"></line> <rect x="4" y="17" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect></g></svg>
         </div>
         <div class="text">
-          light: {{ settings.basicLight }} ({{ percLight }}%) Gyro: {{gyroscope && gyroscope.accZero}} {{gyroscope && gyroscope.acc}}
+          light: {{ settings.basicLight }} ({{ percLight }}%) Gyro: {{gyroscope && gyroscope.acc}} Fermo: {{gyroscope && gyroscope.still}}
         </div>
         <div class="icon" @click="trackImage">
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>barcode qr</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,10 1,10 1,1 10,1 10,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,10 14,10 14,1 14,1 23,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,23 1,23 1,14 10,14 10,14 "></polygon> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,19 23,14 19,14 19,17 15,17 15,14 "></polyline> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,23 15,23 15,21 "></polyline> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,6 5,6 5,5 6,5 6,6 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 19,6 18,6 18,6 18,5 19,5 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,19 5,19 5,18 6,18 6,19 "></polygon></g></svg>
@@ -125,24 +125,7 @@ export default {
       this.gyroscope = {
         isMoving: true,
         acc: 1,
-        accZero: 1,
         still: 0
-      }
-
-      window.ondevicemotion = (event) => {
-        const ax = event.accelerationIncludingGravity.x
-        const ay = event.accelerationIncludingGravity.y
-        const az = event.accelerationIncludingGravity.z
-
-        const x = event.acceleration.x
-        const y = event.acceleration.y
-        const z = event.acceleration.z
-
-        const acc = ax + ay + az
-        const accZero = x + y + z
-
-        this.gyroscope.acc = acc
-        this.gyroscope.accZero = accZero
       }
     } else {
       console.log('device motion not supported')
@@ -218,6 +201,7 @@ export default {
       }
     },
     analyzeLight () {
+      this.stopMotionListener()
       let timeRefresh = 50
       const lightIntensity = parseInt(this.settings.basicLight)
       let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
@@ -237,9 +221,11 @@ export default {
         if (!this.isTracking) {
           console.log('> SEARCH MASK')
           this.maskFinder.setInitialLight(this.settings.basicLight)
-          this.searchMask()
+          if (this.gyroscope) {
+            this.startMotionListener()
+          }
         }
-        timeRefresh = 1500
+        timeRefresh = 5000
       }
       cv.imshow('my-canvas-video', tmp)
 
@@ -248,6 +234,26 @@ export default {
       this.timer = window.setTimeout(() => {
         this.analyzeLight()
       }, timeRefresh)
+    },
+    startMotionListener () {
+      window.addEventListener('devicemotion', this.processMotion)
+    },
+    stopMotionListener () {
+      window.removeEventListener('devicemotion', this.processMotion)
+    },
+    processMotion (event) {
+      console.log(event)
+      const acc = event.acceleration.x + event.acceleration.y + event.acceleration.z
+      const percAcc = parseInt(acc * 100)
+      if (acc < 10 && acc > -10) {
+        this.gyroscope.still += 1
+      } else {
+        this.gyroscope.still = 0
+      }
+      this.gyroscope.acc = percAcc
+    },
+    readMotionData (event) {
+      console.log('reading')
     },
     stopAnalyzeLight () {
       console.log('stop light!')
