@@ -180,6 +180,7 @@ export default class MaskFinder {
       }
     } catch (err) {
       console.log(err)
+      return null
     }
   }
 

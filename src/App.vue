@@ -272,7 +272,7 @@ export default {
         }
       } else {
         this.gyroscope.still = 0
-        if (!this.isTracking) {
+        if (!this.isTracking && !this.message) {
           this.suggestion = 'inquadra il codice'
         }
       }
@@ -313,8 +313,7 @@ export default {
         this.startTracking()
         console.log(mask.sizeRate)
         if (mask.cropped) {
-          cv.imshow('canvasTransform', mask.cropped)
-          mask.cropped.delete()
+          this.decodeImage(mask.cropped)
         } else {
           this.suggestion = 'avvicinati di più per decodificare'
         }
@@ -352,7 +351,7 @@ export default {
       }, 100)
     },
     startTracking () {
-      console.log('> TRAKING')
+      console.log('> TRACKING')
       this.isTracking = true
       this.point = this.maskFinder.processVideo()
       if (!this.point || this.nearEdge(this.point)) {
@@ -361,7 +360,7 @@ export default {
       } else {
         this.timeoutTracking = window.setTimeout(() => {
           this.startTracking()
-        }, 1)
+        }, 10)
       }
     },
     nearEdge (point) {
@@ -377,7 +376,7 @@ export default {
       return false
     },
     stopTracking () {
-      console.log('>> STOP TRAKING')
+      console.log('>> STOP TRACKING')
       this.isTracking = false
       this.message = null
       window.clearTimeout(this.timeoutTracking)
@@ -398,22 +397,26 @@ export default {
     decodeImage (image) {
       this.takeGalleryFlash()
       cv.imshow('canvasTransform', image)
-      this.message = Kircher.decode(image, this.settings.nRepair)
-      image.delete()
+      Kircher.decode(image, this.settings.nRepair)
+        .then((response) => {
+          console.log(response)
+          this.message = response
+          image.delete()
+        })
     },
-    readCode () {
+    async readCode () {
       let image = cv.imread('imageSrc')
-      let code = Kircher.decode(image, this.settings.nRepair)
+      let code = await Kircher.decode(image, this.settings.nRepair)
       alert(code)
       image.delete()
     },
-    cropAndReadCode () {
+    async cropAndReadCode () {
       let image = cv.imread('imageSrc')
       this.maskFinder.setInitialLight(80)
       let croppedImage = this.maskFinder.search(image)
       let code = null
       if (croppedImage) {
-        code = Kircher.decode(croppedImage.cropped, this.settings.nRepair)
+        code = await Kircher.decode(croppedImage.cropped, this.settings.nRepair)
       }
       alert(code)
       return code
@@ -538,7 +541,6 @@ video{
   justify-content: space-between;
   align-items: center;
   color: #9369ff;
-  background-color: rgba(0,0,0,.4);
   z-index: 300;
 }
 .pre-controls .icon{
@@ -556,7 +558,6 @@ video{
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,.9);
   z-index: 300;
 }
 .gallery{

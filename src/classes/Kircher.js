@@ -24,13 +24,15 @@ export default class Kircher {
   }
 
   static decode (image, nRepair) {
+    console.log('DECODING!')
+
     let rgbaPlanes = new cv.MatVector()
     cv.split(image, rgbaPlanes)
     let grayImage = rgbaPlanes.get(2)
 
     const height = grayImage.rows
     const width = grayImage.cols
-    const qrCodeSize = 60
+    const qrCodeSize = 60 // 3600 bit
 
     console.log(width + 'x' + height)
     if (height !== width) {
@@ -40,6 +42,18 @@ export default class Kircher {
 
     const squareSize = parseInt(width / qrCodeSize)
     console.log('squareSize: ' + squareSize)
+
+    let focus = new cv.Mat.zeros(squareSize, squareSize, cv.CV_8UC1) // eslint-disable-line new-cap
+
+    const radius = parseInt(squareSize / 5)
+    const center = parseInt(squareSize / 2)
+
+    // const box = np.int0([(0, center-radius),(squareSize, center+radius),(squareSize, center+radius),(0, center-radius)])
+    const color = new cv.Scalar(255, 255, 255)
+    cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 90.0, 0.0, 360.0, color, -1)
+    cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 0.0, 0.0, 360.0, color, -1)
+    cv.threshold(focus, focus, 100, 255, cv.THRESH_BINARY_INV)
+
     const repeatEncoding = 1
 
     // just for testing!
@@ -79,7 +93,8 @@ export default class Kircher {
         let squareBit = new cv.Mat(squareSize, squareSize, cv.CV_8UC4)
         cv.threshold(square, squareBit, avg, 255, cv.THRESH_BINARY_INV)
 
-        // square_bit = cv.subtract(square_bit, focus_bw) TODO: implement this!
+        cv.subtract(squareBit, focus, squareBit)
+
         let contours = new cv.MatVector()
         let hierarchy = new cv.Mat()
         cv.findContours(squareBit, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
@@ -103,6 +118,7 @@ export default class Kircher {
         }
         fullCode.push(code)
 
+        centroid.delete()
         hierarchy.delete()
         contours.delete()
         squareBit.delete()
@@ -115,6 +131,11 @@ export default class Kircher {
         }
       }
     }
+
+    // free memory
+    grayImage.delete()
+    rgbaPlanes.delete()
+
     fullCode = this.repair(fullCode, nRepair)
     console.log('number of errors: ' + countError + '/3600')
     return this.__decodeBinaryString(fullCode)
