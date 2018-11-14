@@ -344,7 +344,6 @@ export default {
             this.decodeImage(mask.cropped)
           }
         } else {
-          this.message = null
           this.stopTracking()
         }
         this.isMagic = false
@@ -397,26 +396,22 @@ export default {
     decodeImage (image) {
       this.takeGalleryFlash()
       cv.imshow('canvasTransform', image)
-      Kircher.decode(image, this.settings.nRepair)
-        .then((response) => {
-          console.log(response)
-          this.message = response
-          image.delete()
-        })
+      this.message = Kircher.decode(image, this.settings.nRepair)
+      image.delete()
     },
-    async readCode () {
+    readCode () {
       let image = cv.imread('imageSrc')
-      let code = await Kircher.decode(image, this.settings.nRepair)
+      let code = Kircher.decode(image, this.settings.nRepair)
       alert(code)
       image.delete()
     },
-    async cropAndReadCode () {
+    cropAndReadCode () {
       let image = cv.imread('imageSrc')
       this.maskFinder.setInitialLight(80)
       let croppedImage = this.maskFinder.search(image)
       let code = null
       if (croppedImage) {
-        code = await Kircher.decode(croppedImage.cropped, this.settings.nRepair)
+        code = Kircher.decode(croppedImage.cropped, this.settings.nRepair)
       }
       alert(code)
       return code
@@ -517,7 +512,7 @@ video{
   opacity: .2;
 }
 .point.is-tracking:after{
-  background-color: orange;
+  background-color: yellow;
   opacity: 1;
 }
 .point.is-tracking.has-message:after{
