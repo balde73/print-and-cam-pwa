@@ -188,29 +188,21 @@ export default class MaskFinder {
     const width = photo.cols
     const height = photo.rows
     console.log('searchSize: ' + width + 'x' + height)
-    const lightLevels = this.getLightLevels()
     let shotFreeze = new cv.Mat(height, width, cv.CV_8UC4)
     let gray = new cv.Mat(height, width, cv.CV_8UC4)
-    let tmp = new cv.Mat(height, width, cv.CV_8UC4)
+    let blur = new cv.Mat(height, width, cv.CV_8UC4)
     photo.copyTo(shotFreeze)
     cv.cvtColor(shotFreeze, gray, cv.COLOR_RGBA2GRAY, 0)
     let mask = null
     let bestMask = null
-    for (let i = 0; i < lightLevels.length; i++) {
-      let level = lightLevels[i]
-      cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY)
-      mask = this.__findMask(tmp)
-      if (mask != null) {
-        // cv.drawContours(shotFreeze, mask, -1, new cv.Scalar(0, 0, 0), 1)
-        bestMask = mask
-      } else if (bestMask) {
-        console.log('break!')
-        break
-      }
-      cv.imshow(`bw-threshold-${i}`, tmp)
-    }
 
-    tmp.delete()
+    cv.medianBlur(gray, blur, 5)
+    cv.threshold(blur, blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+    mask = this.__findMask(blur)
+    bestMask = mask
+    cv.imshow('my-canvas-video', blur)
+
+    blur.delete()
     gray.delete()
     if (bestMask) {
       const widthCnt = bestMask.rect.width
