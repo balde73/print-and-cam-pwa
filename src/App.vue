@@ -4,7 +4,7 @@
       v-bind:settings="settings"
       v-bind:open="openSettings"
       v-on:stopLight="stopAnalyzeLight"
-      v-on:startLight="startRecording"
+      v-on:startLight="startRecordingLight"
       v-on:changeLevels="changeLevelsLight"
       v-on:changeInitialLight="changeInitialLight"
       v-on:nRepairChange="nRepairChange"
@@ -97,7 +97,7 @@ export default {
       isRecording: false,
       isMagic: false,
       percLight: 0,
-      goodLight: true,
+      goodLight: false,
       timer: null,
       openCropImage: false,
       galleryFlash: false,
@@ -128,7 +128,7 @@ export default {
     }
   },
   mounted () {
-    this.startRecording()
+    this.startRecordingLight()
   },
   computed: {
     rangeLevels: function () {
@@ -136,7 +136,7 @@ export default {
     }
   },
   methods: {
-    async startRecording () {
+    async startRecordingLight () {
       this.video = this.$refs.video
       if (navigator.mediaDevices.getUserMedia) {
         const settings = {
@@ -163,7 +163,7 @@ export default {
             self.capture = new cv.VideoCapture(self.video)
             self.maskFinder = new MaskFinder(self.capture, self.settings.levelsLight)
             self.isRecording = true
-            // self.analyzeLight()
+            self.analyzeLight()
           }
         } catch (error) {
           alert(error)
@@ -299,7 +299,7 @@ export default {
       if (this.isRecording) {
         this.stopRecording()
       } else {
-        this.startRecording()
+        this.startRecordingLight()
       }
     },
     searchMask () {
