@@ -184,30 +184,59 @@ export default class MaskFinder {
     }
   }
 
-  search (photo) {
-    const width = photo.cols
-    const height = photo.rows
+  search (photo, hardness = 1) {
+    let width = photo.cols
+    let height = photo.rows
     console.log('searchSize: ' + width + 'x' + height)
+    let shotFreeze = new cv.Mat()
+    let resizeRate = {
+      width: 1,
+      height: 1
+    }
+    if (height > 500 && hardness === 1) {
+      height = 500
+      const rate = height / photo.rows
+      width = parseInt(width * rate)
+      console.log('resize to: ' + width + 'x' + height)
+      resizeRate = {
+        width: photo.cols / width,
+        height: photo.rows / height
+      }
+      cv.resize(photo, shotFreeze, new cv.Size(width, height), cv.INTER_CUBIC)
+    } else {
+      photo.copyTo(shotFreeze)
+    }
+    if (hardness > 1) {
+      this.levels = this.levels * 2
+    }
     const lightLevels = this.getLightLevels()
-    let shotFreeze = new cv.Mat(height, width, cv.CV_8UC4)
     let gray = new cv.Mat(height, width, cv.CV_8UC4)
     let tmp = new cv.Mat(height, width, cv.CV_8UC4)
-    photo.copyTo(shotFreeze)
     cv.cvtColor(shotFreeze, gray, cv.COLOR_RGBA2GRAY, 0)
     let mask = null
     let bestMask = null
+    let bestPerc = 0
     for (let i = 0; i < lightLevels.length; i++) {
       let level = lightLevels[i]
       cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY)
       mask = this.__findMask(tmp)
       if (mask != null) {
-        // cv.drawContours(shotFreeze, mask, -1, new cv.Scalar(0, 0, 0), 1)
-        bestMask = mask
+        console.log(mask.perc)
+        if (mask.perc > bestPerc) {
+          bestPerc = mask.perc
+          bestMask = mask
+          if (hardness <= 1) {
+            break
+          }
+        } else {
+          console.log('break! (peggioro)')
+          break
+        }
       } else if (bestMask) {
         console.log('break!')
         break
       }
-      cv.imshow(`bw-threshold-${i}`, tmp)
+      // cv.imshow(`bw-threshold-${i}`, tmp)
     }
 
     tmp.delete()
@@ -219,12 +248,12 @@ export default class MaskFinder {
       const minSize = Math.min(width, height)
 
       const sizeRate = minSizeCnt / minSize
-      let rect = this.__exploitPoints(bestMask.cnt)
+      let rect = this.__exploitPoints(bestMask.cnt, resizeRate)
       rect = this.__orderPoints(rect)
       let cropped = null
-      if (sizeRate > 0.8) {
-        console.log('sizeRate is good')
-        cropped = this.__crop(shotFreeze, rect)
+      if (this.__pixelDensity(widthCnt, heightCnt)) {
+        console.log('pixelDensity is good')
+        cropped = this.__crop(photo, rect)
       }
       shotFreeze.delete()
       return {
@@ -262,6 +291,12 @@ export default class MaskFinder {
     return cropped
   }
 
+  __pixelDensity (width, height) {
+    const area = width * height
+    const squareArea = area / 3600
+    return squareArea > 100
+  }
+
   __drawRect (bestMask) {
     return false
   }
@@ -282,6 +317,7 @@ export default class MaskFinder {
     let best = new cv.Mat()
     let bestRect = null
     let maxArea = 0
+    let perc = 0
 
     for (let i = 0; i < contours.size(); ++i) {
       let cnt = contours.get(i)
@@ -294,11 +330,14 @@ export default class MaskFinder {
         cv.approxPolyDP(cnt, tmp, 0.01 * peri, true)
 
         if (tmp.matSize[0] === 4) {
-          let area = cv.contourArea(tmp)
+          const area = cv.contourArea(tmp)
+          const {width, height} = contourRect
+          const boundArea = width * height
           if (area > maxArea) {
             best = tmp.clone()
             bestRect = contourRect
             maxArea = area
+            perc = area / boundArea
           }
         }
         tmp.delete()
@@ -308,7 +347,8 @@ export default class MaskFinder {
     hull.push_back(best)
     return maxArea ? {
       rect: bestRect,
-      cnt: best
+      cnt: best,
+      perc
     } : null
   }
   __contourOK (contourRect) {
@@ -429,13 +469,13 @@ export default class MaskFinder {
     }
   }
 
-  __exploitPoints (points) {
+  __exploitPoints (points, resizeRate = {width: 1, height: 1}) {
     let rect = [[0, 0], [0, 0], [0, 0], [0, 0]]
 
-    rect[0] = new cv.Point(points.data32S[0], points.data32S[1])
-    rect[1] = new cv.Point(points.data32S[2], points.data32S[3])
-    rect[2] = new cv.Point(points.data32S[4], points.data32S[5])
-    rect[3] = new cv.Point(points.data32S[6], points.data32S[7])
+    rect[0] = new cv.Point(parseInt(points.data32S[0] * resizeRate.width), parseInt(points.data32S[1] * resizeRate.height))
+    rect[1] = new cv.Point(parseInt(points.data32S[2] * resizeRate.width), parseInt(points.data32S[3] * resizeRate.height))
+    rect[2] = new cv.Point(parseInt(points.data32S[4] * resizeRate.width), parseInt(points.data32S[5] * resizeRate.height))
+    rect[3] = new cv.Point(parseInt(points.data32S[6] * resizeRate.width), parseInt(points.data32S[7] * resizeRate.height))
     return rect
   }
 
@@ -472,8 +512,9 @@ export default class MaskFinder {
 
     let warped = new cv.Mat()
     let dsize = new cv.Size(maxWidth, maxHeight)
+    console.log('mw: ' + maxWidth + ', mh: ' + maxHeight)
     cv.warpPerspective(image, warped, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar())
-    const maxSize = 3598
+    const maxSize = 3600
     let maxsize = new cv.Size(maxSize, maxSize)
     cv.resize(warped, warped, maxsize, cv.INTER_CUBIC)
 

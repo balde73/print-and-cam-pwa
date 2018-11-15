@@ -225,9 +225,9 @@ export default {
       if (perc < 20 && this.settings.basicLight > 10) {
         this.goodLight = false
         this.settings.basicLight -= 10
-      } else if (perc > 25 && this.settings.basicLight < 240) {
+      } else if (perc > 30 && this.settings.basicLight < 240) {
         this.goodLight = false
-        this.settings.basicLight += 9
+        this.settings.basicLight += 7
       } else {
         this.goodLight = true
         this.maskFinder.setInitialLight(this.settings.basicLight)
@@ -261,11 +261,11 @@ export default {
       }
       if (percAcc < this.settings.maxVibration) {
         this.gyroscope.still += 1
-        if (this.gyroscope.still > 30) {
+        if (this.gyroscope.still > 10) {
           if (!this.isTracking) {
             this.gyroscope.still = 0
             this.searchMask()
-          } else if (!this.message) {
+          } else if (!this.message && this.gyroscope.still > 30) {
             this.gyroscope.still = 0
             this.tryFullDecoding()
           }
@@ -311,21 +311,19 @@ export default {
         let {tl, br} = mask.rect
         this.maskFinder.studyPortion(shot, tl.x, tl.y, br.x, br.y)
         this.startTracking()
-        console.log(mask.sizeRate)
-        if (mask.cropped) {
-          this.decodeImage(mask.cropped)
-        } else {
-          this.suggestion = 'avvicinati di più per decodificare'
-        }
+        this.suggestion = 'avvicinati per decodificare'
       }
     },
     tryFullDecoding () {
       // the algorithm is still tracking the object
       let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(shot)
-      let mask = this.maskFinder.search(shot)
+      let mask = this.maskFinder.search(shot, 100)
       if (mask && mask.cropped) {
+        this.suggestion = 'messaggio decodificato'
         this.decodeImage(mask.cropped)
+      } else {
+        this.suggestion = 'più vicino'
       }
     },
     snapshot () {
@@ -408,9 +406,10 @@ export default {
     cropAndReadCode () {
       let image = cv.imread('imageSrc')
       this.maskFinder.setInitialLight(80)
-      let croppedImage = this.maskFinder.search(image)
+      let croppedImage = this.maskFinder.search(image, 100)
+      console.log(croppedImage)
       let code = null
-      if (croppedImage) {
+      if (croppedImage.cropped) {
         code = Kircher.decode(croppedImage.cropped, this.settings.nRepair)
       }
       alert(code)
