@@ -1,5 +1,5 @@
 export default class MaskFinder {
-  constructor (capture, levels = 5, initialLight = 50) {
+  constructor (capture, levels = 5, initialLight = 50, debugMode = true) {
     this.capture = capture
     this.width = capture.video.width
     this.height = capture.video.height
@@ -7,6 +7,7 @@ export default class MaskFinder {
     this.levels = levels
     this.initialLight = initialLight
     this.mask = null
+    this.debugMode = debugMode
   }
   snapshot () {
     this.capture.read(this.shot)
@@ -19,16 +20,16 @@ export default class MaskFinder {
     this.initialLight = light
   }
   getLightLevels () {
-    let light = this.initialLight
+    let initialLight = this.initialLight
     const steps = this.levels
     // const maxStep = parseInt((255 - light) / 3 * 2)
-    const maxStep = Math.min(255, light + steps * 10)
-    console.log(light + steps * 10)
-    const step = parseInt((maxStep - light) / steps)
+    const maxStep = Math.min(255, initialLight + steps * 10)
+    console.log(initialLight + steps * 10)
+    const step = (maxStep - initialLight) / steps
     let lightLevels = []
     for (let i = 0; i < this.levels; i++) {
+      const light = parseInt(initialLight + step * i)
       lightLevels.push(light)
-      light = light + step
     }
     console.log(lightLevels)
     return lightLevels
@@ -99,29 +100,24 @@ export default class MaskFinder {
       console.log(e)
     }
   }
-  studyPortion (shotFreeze, x1, y1, x2, y2) {
+  studyPortion (shotFreeze, rect) {
     console.log('start tracking')
-    console.log(x1 + ' ' + y1 + ' ' + x2 + ' ' + y2)
-    // take first frame of the video
-
-    console.log(shotFreeze)
-    let heightRect = y2 - y1
-    let widthRect = x2 - x1
 
     // hardcode the initial location of window
-    this.trackWindow = new cv.Rect(x1, y1, widthRect, heightRect)
+    this.trackWindow = rect
     console.log(this.trackWindow)
 
     // set up the ROI for tracking
     let roi = shotFreeze.roi(this.trackWindow)
 
-    cv.imshow('my-canvas-video-1', roi)
-
     let hsvRoi = new cv.Mat()
     cv.cvtColor(roi, hsvRoi, cv.COLOR_RGBA2RGB)
     cv.cvtColor(hsvRoi, hsvRoi, cv.COLOR_RGB2HSV)
 
-    cv.imshow('my-canvas-video-2', hsvRoi)
+    if (this.debugMode) {
+      cv.imshow('my-canvas-video-1', roi)
+      cv.imshow('my-canvas-video-2', hsvRoi)
+    }
 
     let mask = new cv.Mat()
     let lowScalar = new cv.Scalar(30, 30, 0)
@@ -206,82 +202,38 @@ export default class MaskFinder {
     } else {
       photo.copyTo(shotFreeze)
     }
-    if (hardness > 1) {
-      this.levels = this.levels * 2
-    }
-    const lightLevels = this.getLightLevels()
     let gray = new cv.Mat(height, width, cv.CV_8UC4)
-    let tmp = new cv.Mat(height, width, cv.CV_8UC4)
     cv.cvtColor(shotFreeze, gray, cv.COLOR_RGBA2GRAY, 0)
-    let mask = null
     let bestMask = null
-    let bestPerc = 0
-    for (let i = 0; i < lightLevels.length; i++) {
-      let level = lightLevels[i]
-      cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY)
-      mask = this.__findMask(tmp)
-      if (mask != null) {
-        console.log(mask.perc)
-        if (mask.perc > bestPerc) {
-          bestPerc = mask.perc
-          bestMask = mask
-          if (hardness <= 1) {
-            break
-          }
-        } else {
-          console.log('break! (peggioro)')
-          break
-        }
-      } else if (bestMask) {
-        console.log('break!')
-        break
-      }
-      // cv.imshow(`bw-threshold-${i}`, tmp)
-    }
-
-    tmp.delete()
+    bestMask = this.__findMaskManyLevels(gray, hardness)
     gray.delete()
+
     if (bestMask) {
       const widthCnt = bestMask.rect.width
       const heightCnt = bestMask.rect.height
       const minSizeCnt = Math.min(widthCnt, heightCnt)
       const minSize = Math.min(width, height)
-
       const sizeRate = minSizeCnt / minSize
-      let rect = this.__exploitPoints(bestMask.cnt, resizeRate)
-      rect = this.__orderPoints(rect)
       let cropped = null
       if (this.__pixelDensity(widthCnt, heightCnt)) {
         console.log('pixelDensity is good')
+        let rect = this.__exploitPoints(bestMask.cnt, resizeRate)
+        rect = this.__orderPoints(rect)
         cropped = this.__crop(photo, rect)
       }
       shotFreeze.delete()
       return {
         cropped: cropped,
-        rect: rect,
+        rect: this.__exploitRect(bestMask.rect, resizeRate),
         sizeRate: sizeRate
       }
     }
     shotFreeze.delete()
     return null
+  }
 
-    /*
-    let cropped = null
-    if (bestMask) {
-      console.log('mask found!')
-      this.__drawRect(bestMask)
-      let rect = this.__exploitPoints(bestMask)
-      rect = this.__orderPoints(rect)
-      cropped = this.__crop(shotFreeze, rect)
-      console.log('cropped')
-      this.mask = cropped
-      let {tl, br} = rect
-      this.trackPortion(shotFreeze, tl.x, tl.y, br.x, br.y)
-    } else {
-      console.log('nothing found')
-      this.__cleanRect(bestMask)
-    }
-    */
+  setDebugMode (value) {
+    this.debugMode = value
   }
 
   // private methods
@@ -305,15 +257,56 @@ export default class MaskFinder {
     return false
   }
 
+  __findMaskManyLevels (gray, hardness = 1) {
+    const lightLevels = this.getLightLevels()
+    let tmp = new cv.Mat()
+    let bestPerc = 0
+    let bestMask = null
+    for (let i = 0; i < lightLevels.length; i++) {
+      let level = lightLevels[i]
+      cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY)
+      if (this.debugMode) {
+        cv.imshow(`bw-threshold-${i}`, tmp)
+      }
+      let mask = this.__findMask(tmp)
+
+      /*
+      mask è composto da due cv.Mat che andrebbero probabilmente distrutti
+      TODO: valutare la strategia migliore
+      */
+
+      if (mask != null) {
+        console.log(i + ' > ' + mask.perc)
+        if (mask.perc > bestPerc) {
+          bestPerc = mask.perc
+          bestMask = mask
+          if (hardness <= 1) {
+            break
+          }
+        } else {
+          console.log(i + ' break! (peggioro)')
+          break
+        }
+      } else if (bestMask) {
+        console.log(i + ' break!')
+        break
+      } else {
+        console.log(i + ' nothing found... continue')
+      }
+    }
+    tmp.delete()
+    return bestMask
+  }
+
   __findMask (img) {
     let contours = new cv.MatVector()
     let hierarchy = new cv.Mat()
     cv.findContours(img, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    hierarchy.delete()
     return this.__bestContour(contours)
   }
 
   __bestContour (contours) {
-    let hull = new cv.MatVector()
     let best = new cv.Mat()
     let bestRect = null
     let maxArea = 0
@@ -344,7 +337,6 @@ export default class MaskFinder {
       }
       cnt.delete()
     }
-    hull.push_back(best)
     return maxArea ? {
       rect: bestRect,
       cnt: best,
@@ -467,6 +459,10 @@ export default class MaskFinder {
       bl: bottom[1],
       br: bottom[0]
     }
+  }
+
+  __exploitRect (rect, resizeRate = {width: 1, height: 1}) {
+    return new cv.Rect(rect.x * resizeRate.width, rect.y * resizeRate.height, rect.width * resizeRate.width, rect.height * resizeRate.height)
   }
 
   __exploitPoints (points, resizeRate = {width: 1, height: 1}) {

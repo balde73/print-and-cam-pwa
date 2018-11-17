@@ -6,6 +6,10 @@
         <input type="number" min="1" max="10" @change="$emit('nRepairChange')" v-model.number="settings.nRepair" />
       </div>
       <div class="inline-input">
+        <label>Debug Mode</label>
+        <input type="checkbox" @change="$emit('debugModeChange')" v-model="settings.debugMode" />
+      </div>
+      <div class="inline-input">
         <label>Override light</label>
         <input type="checkbox" @change="toggleLight" v-model="settings.overrideLight" />
       </div>

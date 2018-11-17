@@ -133,6 +133,7 @@ export default class Kircher {
     }
 
     // free memory
+    focus.delete()
     grayImage.delete()
     rgbaPlanes.delete()
 

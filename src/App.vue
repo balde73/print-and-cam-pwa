@@ -9,7 +9,8 @@
       v-on:changeInitialLight="changeInitialLight"
       v-on:nRepairChange="nRepairChange"
       v-on:closeSettings="closeSettings"
-      v-on:changeVibrations="changeVibrations" />
+      v-on:changeVibrations="changeVibrations"
+      v-on:debugModeChange="debugModeChange" />
     <div class="canvas-video">
       <div class="real-canvas-video maxCanvasSize"
         v-bind:style="{
@@ -18,7 +19,12 @@
           marginTop: - this.realVideoDim.height / 2 + 'px',
           marginLeft: - this.realVideoDim.width / 2 + 'px',
         }">
-        <div v-show="suggestion" class="suggestion">
+        <div class="tooltip" v-show="message">
+          <div class="text">
+            {{ message }}
+          </div>
+        </div>
+        <div v-show="suggestion && !message" class="suggestion">
           <div class="text">
             {{ suggestion }}
           </div>
@@ -26,11 +32,7 @@
         <div class="point"
           v-bind:style="{ left: point.x + '%', top: point.y + '%' }"
           :class="{'is-tracking': isTracking, 'has-message': message}"
-          @click="showMessage=!showMessage"
           >
-          <div class="tooltip" v-show="showMessage">
-            Messsaggio: {{ message }}
-          </div>
         </div>
       </div>
       <video ref="video" id="videoInput" class="maxCanvasSize" autoplay="true" playsinline></video>
@@ -108,7 +110,8 @@ export default {
         basicLight: parseInt(this.$cookies.get('basicLight')) || 70,
         levelsLight: parseInt(this.$cookies.get('levelsLight')) || 5,
         galleryFlash: false,
-        maxVibration: parseInt(this.$cookies.get('maxVibration')) || 30
+        maxVibration: parseInt(this.$cookies.get('maxVibration')) || 30,
+        debugMode: true
       },
       timeoutTracking: null,
       point: {
@@ -238,7 +241,9 @@ export default {
         }
         timeRefresh = 150
       }
-      cv.imshow('my-canvas-video', tmp)
+      if (this.settings.debugMode) {
+        cv.imshow('my-canvas-video', tmp)
+      }
 
       tmp.delete()
 
@@ -308,8 +313,7 @@ export default {
       this.capture.read(shot)
       let mask = this.maskFinder.search(shot)
       if (mask) {
-        let {tl, br} = mask.rect
-        this.maskFinder.studyPortion(shot, tl.x, tl.y, br.x, br.y)
+        this.maskFinder.studyPortion(shot, mask.rect)
         this.startTracking()
         this.suggestion = 'avvicinati per decodificare'
       }
@@ -334,9 +338,7 @@ export default {
         this.capture.read(shot)
         let mask = this.maskFinder.search(shot)
         if (mask) {
-          console.log(mask)
-          let {tl, br} = mask.rect
-          this.maskFinder.studyPortion(shot, tl.x, tl.y, br.x, br.y)
+          this.maskFinder.studyPortion(shot, mask.rect)
           this.startTracking()
           if (mask.cropped) {
             this.decodeImage(mask.cropped)
@@ -440,6 +442,10 @@ export default {
     changeVibrations () {
       const value = this.settings.maxVibration
       this.$cookies.set('maxVibration', value)
+    },
+    debugModeChange () {
+      const value = this.settings.debugMode
+      this.maskFinder.setDebugMode(value)
     }
   }
 }
@@ -517,12 +523,20 @@ video{
 .point.is-tracking.has-message:after{
   background-color: greenyellow;
 }
-.point .tooltip{
+.tooltip{
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
   padding: 1rem;
   background: white;
+}
+.tooltip .text{
+  background-color: white;
+  max-width: 300px;
+  border-radius: 30px;
+  padding: 1rem;
+  margin: 0 auto;
 }
 .pre-controls{
   position: absolute;
