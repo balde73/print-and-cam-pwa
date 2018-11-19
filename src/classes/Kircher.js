@@ -32,7 +32,7 @@ export default class Kircher {
 
     const height = grayImage.rows
     const width = grayImage.cols
-    const qrCodeSize = 64 // 3600 bit
+    const qrCodeSize = 64 // 4096 bit
 
     console.log(width + 'x' + height)
     if (height !== width) {
@@ -138,7 +138,7 @@ export default class Kircher {
     rgbaPlanes.delete()
 
     fullCode = this.repair(fullCode, nRepair)
-    console.log('number of errors: ' + countError + '/3600')
+    console.log('number of errors: ' + countError + '/' + qrCodeSize * qrCodeSize)
     return this.__decodeBinaryString(fullCode)
   }
 
