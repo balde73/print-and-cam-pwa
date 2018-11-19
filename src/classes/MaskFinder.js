@@ -23,9 +23,9 @@ export default class MaskFinder {
     let initialLight = this.initialLight
     const steps = this.levels
     // const maxStep = parseInt((255 - light) / 3 * 2)
-    const maxStep = Math.min(255, initialLight + steps * 10)
-    console.log(initialLight + steps * 10)
-    const step = (maxStep - initialLight) / steps
+    const maxStep = Math.max(0, initialLight - steps * 10)
+    console.log(initialLight - steps * 10)
+    const step = (initialLight - maxStep) / steps
     let lightLevels = []
     for (let i = 0; i < this.levels; i++) {
       const light = parseInt(initialLight + step * i)
@@ -264,7 +264,7 @@ export default class MaskFinder {
     let bestMask = null
     for (let i = 0; i < lightLevels.length; i++) {
       let level = lightLevels[i]
-      cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY)
+      cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY_INV)
       if (this.debugMode) {
         cv.imshow(`bw-threshold-${i}`, tmp)
       }

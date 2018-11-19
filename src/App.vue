@@ -215,37 +215,40 @@ export default {
     },
     analyzeLight () {
       let timeRefresh = 50
-      const lightIntensity = parseInt(this.settings.basicLight)
-      let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
-      this.capture.read(tmp)
-      cv.cvtColor(tmp, tmp, cv.COLOR_RGBA2GRAY, 0)
-      cv.threshold(tmp, tmp, lightIntensity, 255, cv.THRESH_BINARY)
-      const whitePixels = cv.countNonZero(tmp)
-      const totalPixels = this.video.height * this.video.width
-      const perc = parseInt(whitePixels / totalPixels * 100)
-      this.percLight = perc
+      if (!this.message) {
+        const lightIntensity = parseInt(this.settings.basicLight)
+        let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
+        this.capture.read(tmp)
+        cv.cvtColor(tmp, tmp, cv.COLOR_RGBA2GRAY, 0)
+        cv.threshold(tmp, tmp, lightIntensity, 255, cv.THRESH_BINARY_INV)
+        const whitePixels = cv.countNonZero(tmp)
+        const totalPixels = this.video.height * this.video.width
+        const perc = parseInt(whitePixels / totalPixels * 100)
+        this.percLight = perc
 
-      if (perc < 20 && this.settings.basicLight > 10) {
-        this.goodLight = false
-        this.settings.basicLight -= 10
-      } else if (perc > 30 && this.settings.basicLight < 240) {
-        this.goodLight = false
-        this.settings.basicLight += 7
-      } else {
-        this.goodLight = true
-        this.maskFinder.setInitialLight(this.settings.basicLight)
-        if (this.settings.basicLight <= 10) {
-          this.suggestion = 'probably too dark'
-        } else if (this.settings.basicLight >= 240) {
-          this.suggestion = 'probably too light'
+        if (perc < 20 && this.settings.basicLight < 240) {
+          this.goodLight = false
+          this.settings.basicLight += 10
+        } else if (perc > 30 && this.settings.basicLight < 10) {
+          this.goodLight = false
+          this.settings.basicLight -= 7
+        } else {
+          this.goodLight = true
+          this.maskFinder.setInitialLight(this.settings.basicLight)
+          if (this.settings.basicLight <= 10) {
+            this.suggestion = 'probably too dark'
+          } else if (this.settings.basicLight >= 240) {
+            this.suggestion = 'probably too light'
+          }
+          timeRefresh = 500
         }
-        timeRefresh = 150
+        if (this.settings.debugMode) {
+          cv.imshow('my-canvas-video', tmp)
+        }
+        tmp.delete()
+      } else {
+        timeRefresh = 500
       }
-      if (this.settings.debugMode) {
-        cv.imshow('my-canvas-video', tmp)
-      }
-
-      tmp.delete()
 
       this.timer = window.setTimeout(() => {
         this.analyzeLight()
@@ -484,6 +487,7 @@ video{
 .real-canvas-video .suggestion{
   position: absolute;
   top: 1rem;
+  left: 0;
   width: 100%;
   text-align: center;
 }
@@ -529,7 +533,7 @@ video{
   left: 0;
   width: 100%;
   padding: 1rem;
-  background: white;
+  box-sizing: border-box;
 }
 .tooltip .text{
   background-color: white;
