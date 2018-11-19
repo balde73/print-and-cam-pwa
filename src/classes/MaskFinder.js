@@ -514,7 +514,7 @@ export default class MaskFinder {
     let maxsize = new cv.Size(maxSize, maxSize)
     cv.resize(warped, warped, maxsize, cv.INTER_CUBIC)
 
-    const hb = parseInt(maxSize / 12.05 + 0.5)
+    const hb = maxSize / 100 * 4
 
     let cuttingZone = new cv.Rect(hb, hb, parseInt(maxSize - (hb * 2)), parseInt(maxSize - (hb * 2)))
     warped = warped.roi(cuttingZone)
