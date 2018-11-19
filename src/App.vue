@@ -21,7 +21,13 @@
         }">
         <div class="tooltip" v-show="message">
           <div class="text">
-            {{ message }}
+            <div class="">
+              {{ message }}
+            </div>
+            -------
+            <div class="">
+              {{ errors }}
+            </div>
           </div>
         </div>
         <div v-show="suggestion && !message" class="suggestion">
@@ -127,7 +133,8 @@ export default {
       showMessage: false,
       isTracking: false,
       gyroscope: null,
-      suggestion: null
+      suggestion: null,
+      errors: 0
     }
   },
   mounted () {
@@ -400,11 +407,38 @@ export default {
       this.takeGalleryFlash()
       cv.imshow('canvasTransform', image)
       this.message = Kircher.decode(image, this.settings.nRepair)
+      this.countErrors(this.message)
       image.delete()
+    },
+    countErrors (message) {
+      // just for testing!
+      const maxSizeEncoded = parseInt(64 * 64 / (this.settings.nRepair * 8))
+      let st = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque interdum nec dolor non consectetur. Nam vel euismod mauris. Aliquam sit amet ligula in est rutrum auctor ut ac lorem. Duis blandit convallis pulvinar. Pellentesque sed vestibulum purus. Curabitur lacinia luctus orci ac molestie. Morbi gravida hendrerit neque, non consequat dui eleifend id. Morbi tincidunt nisi enim, vel laoreet magna rutrum vel. Quisque vel ultrices lacus. Sed id diam eget justo rutrum rutrum. Nulla maximus augue ex, at viverra sem venenatis id. Morbi id orci vel enim luctus condimentum. Cras metus neque, ultricies ut condimentum in, euismod in est. Etiam maximus neque vel velit suscipit semper. Pellentesque nec velit odio'
+      if (st.length > maxSizeEncoded) {
+        // cut the encoding
+        st = st.substring(0, maxSizeEncoded)
+      }
+      let encoding = Kircher.encodeBinaryString(st)
+      let code = Kircher.encodeBinaryString(message)
+      let errors = 0
+      for (let i = 0; i < code.length; i++) {
+        if (code[i] !== encoding[i]) {
+          errors += 1
+        }
+      }
+      let errorsString = 0
+      for (let i = 0; i < message.length; i++) {
+        if (message[i] !== st[i]) {
+          errorsString += 1
+        }
+      }
+      this.errors = errors + '/' + maxSizeEncoded * 8 + ' - ' + errorsString + '/' + maxSizeEncoded
+      console.log(this.errors)
     },
     readCode () {
       let image = cv.imread('imageSrc')
       let code = Kircher.decode(image, this.settings.nRepair)
+      this.countErrors(code)
       alert(code)
       image.delete()
     },
@@ -416,6 +450,7 @@ export default {
       let code = null
       if (croppedImage.cropped) {
         code = Kircher.decode(croppedImage.cropped, this.settings.nRepair)
+        this.countErrors(code)
       }
       alert(code)
       return code

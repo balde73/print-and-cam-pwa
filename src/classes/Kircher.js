@@ -54,23 +54,6 @@ export default class Kircher {
     cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 0.0, 0.0, 360.0, color, -1)
     cv.threshold(focus, focus, 100, 255, cv.THRESH_BINARY_INV)
 
-    const repeatEncoding = 1
-
-    // just for testing!
-    const maxSizeEncoded = parseInt(qrCodeSize * qrCodeSize / repeatEncoding)
-    let st = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque interdum nec dolor non consectetur. Nam vel euismod mauris. Aliquam sit amet ligula in est rutrum auctor ut ac lorem. Duis blandit convallis pulvinar. Pellentesque sed vestibulum purus. Curabitur lacinia luctus orci ac molestie. Morbi gravida hendrerit neque, non consequat dui eleifend id. Morbi tincidunt nisi enim, vel laoreet magna rutrum vel. Quisque vel ultrices lacus. Sed id diam eget justo rutrum rutrum. Nulla maximus augue ex, at viverra sem venenatis id. Morbi id orci vel enim luctus condimentum. Cras metus neque, ultricies ut condimentum in, euismod in est. Etiam maximus neque vel velit suscipit semper. Pellentesque nec velit odio'
-    let startingEncoding = this.__encodeBinaryString(st)
-    if (startingEncoding.length > maxSizeEncoded) {
-      // cut the encoding
-      startingEncoding = startingEncoding.substring(0, maxSizeEncoded)
-    }
-    let encoding = ''
-    for (let i = 0; i < repeatEncoding; i++) {
-      encoding += startingEncoding
-    }
-    let countError = 0
-    // console.log('trying to read ' + encoding)
-
     let fullCode = []
     for (let row = 0; row < qrCodeSize; row++) {
       for (let col = 0; col < qrCodeSize; col++) {
@@ -123,12 +106,6 @@ export default class Kircher {
         contours.delete()
         squareBit.delete()
         square.delete()
-
-        let n = row * qrCodeSize + col
-        if (!(encoding[n] === code.value)) {
-          // console.log('wrong!!' + n)
-          countError++
-        }
       }
     }
 
@@ -138,7 +115,6 @@ export default class Kircher {
     rgbaPlanes.delete()
 
     fullCode = this.repair(fullCode, nRepair)
-    console.log('number of errors: ' + countError + '/' + qrCodeSize * qrCodeSize)
     return this.__decodeBinaryString(fullCode)
   }
 
@@ -176,7 +152,7 @@ export default class Kircher {
     return code
   }
 
-  static __encodeBinaryString (s) {
+  static encodeBinaryString (s) {
     let fullCode = ''
     for (let i = 0; i < s.length; i++) {
       const char = s[i]
