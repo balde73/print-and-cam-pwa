@@ -32,7 +32,7 @@ export default class Kircher {
 
     const height = grayImage.rows
     const width = grayImage.cols
-    const qrCodeSize = 60 // 3600 bit
+    const qrCodeSize = 64 // 3600 bit
 
     console.log(width + 'x' + height)
     if (height !== width) {
