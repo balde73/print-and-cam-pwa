@@ -23,7 +23,7 @@ export default class MaskFinder {
     let initialLight = this.initialLight
     const steps = this.levels
     // const maxStep = parseInt((255 - light) / 3 * 2)
-    const maxStep = Math.max(0, initialLight - steps * 10)
+    const maxStep = Math.max(0, initialLight + steps * 10)
     console.log(initialLight - steps * 10)
     const step = (initialLight - maxStep) / steps
     let lightLevels = []
@@ -75,10 +75,12 @@ export default class MaskFinder {
     let kp2 = new cv.KeyPointVector()
     let des2 = new cv.Mat()
 
-    console.log(this.mask)
+    let mask = this.shot.roi(new cv.Rect(50, 50, 300, 300))
+
+    console.log(mask)
     console.log(this.shot)
 
-    orb.detectAndCompute(this.mask, new cv.Mat(), kp1, des1)
+    orb.detectAndCompute(mask, new cv.Mat(), kp1, des1)
     orb.detectAndCompute(this.shot, new cv.Mat(), kp2, des2)
 
     console.log(kp1.size())
@@ -88,9 +90,9 @@ export default class MaskFinder {
       let bf = new cv.BFMatcher(cv.NORM_HAMMING, true)
       console.log(bf)
       // Match descriptors.
-      // let matches = new cv.MatVector()
-      // bf.match(des1, des2, matches)
-      // console.log(matches)
+      let matches = new cv.DMatchVector()
+      bf.match(des1, des2, matches)
+      console.log(matches)
       // Sort them in the order of their distance.
       // matches = sorted(matches, key = lambda x:x.distance)
       // Draw first 10 matches.
@@ -116,7 +118,6 @@ export default class MaskFinder {
 
     if (this.debugMode) {
       cv.imshow('my-canvas-video-1', roi)
-      cv.imshow('my-canvas-video-2', hsvRoi)
     }
 
     let mask = new cv.Mat()

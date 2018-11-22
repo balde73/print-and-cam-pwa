@@ -26,6 +26,8 @@ export default class Kircher {
   static decode (image, nRepair) {
     console.log('DECODING!')
 
+    let errorImage = image.clone()
+
     let rgbaPlanes = new cv.MatVector()
     cv.split(image, rgbaPlanes)
     let grayImage = rgbaPlanes.get(2)
@@ -44,6 +46,14 @@ export default class Kircher {
     console.log('squareSize: ' + squareSize)
 
     let focus = new cv.Mat.zeros(squareSize, squareSize, cv.CV_8UC1) // eslint-disable-line new-cap
+
+    const maxSizeEncoded = parseInt(64 * 64 / (nRepair * 8))
+    let st = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque interdum nec dolor non consectetur. Nam vel euismod mauris. Aliquam sit amet ligula in est rutrum auctor ut ac lorem. Duis blandit convallis pulvinar. Pellentesque sed vestibulum purus. Curabitur lacinia luctus orci ac molestie. Morbi gravida hendrerit neque, non consequat dui eleifend id. Morbi tincidunt nisi enim, vel laoreet magna rutrum vel. Quisque vel ultrices lacus. Sed id diam eget justo rutrum rutrum. Nulla maximus augue ex, at viverra sem venenatis id. Morbi id orci vel enim luctus condimentum. Cras metus neque, ultricies ut condimentum in, euismod in est. Etiam maximus neque vel velit suscipit semper. Pellentesque nec velit odio'
+    if (st.length > maxSizeEncoded) {
+      // cut the encoding
+      st = st.substring(0, maxSizeEncoded)
+    }
+    let encoding = Kircher.encodeBinaryString(st)
 
     const radius = parseInt(squareSize / 5)
     const center = parseInt(squareSize / 2)
@@ -106,13 +116,21 @@ export default class Kircher {
         contours.delete()
         squareBit.delete()
         square.delete()
+
+        let n = row * qrCodeSize + col
+        if (encoding[n] !== code.value) {
+          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize, fromY + squareSize), new cv.Scalar(0, 255, 0, 255), 3)
+        }
       }
     }
+
+    cv.imshow('my-canvas-video-2', errorImage)
 
     // free memory
     focus.delete()
     grayImage.delete()
     rgbaPlanes.delete()
+    errorImage.delete()
 
     fullCode = this.repair(fullCode, nRepair)
     return this.__decodeBinaryString(fullCode)
