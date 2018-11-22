@@ -119,7 +119,9 @@ export default class Kircher {
 
         let n = row * qrCodeSize + col
         if (encoding[n] !== code.value) {
-          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize, fromY + squareSize), new cv.Scalar(0, 255, 0, 255), 3)
+          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize, fromY + squareSize), new cv.Scalar(255, 0, 0, 255), 1)
+        } else {
+          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize, fromY + squareSize), new cv.Scalar(0, 255, 0, 255), 1)
         }
       }
     }
