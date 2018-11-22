@@ -26,8 +26,6 @@ export default class Kircher {
   static decode (image, nRepair) {
     console.log('DECODING!')
 
-    let errorImage = image.clone()
-
     let rgbaPlanes = new cv.MatVector()
     cv.split(image, rgbaPlanes)
     let grayImage = rgbaPlanes.get(2)
@@ -35,6 +33,8 @@ export default class Kircher {
     const height = grayImage.rows
     const width = grayImage.cols
     const qrCodeSize = 64 // 4096 bit
+
+    let errorImage = image.clone()
 
     console.log(width + 'x' + height)
     if (height !== width) {
@@ -71,7 +71,7 @@ export default class Kircher {
         const fromX = parseInt(col * squareSize)
 
         // console.log(fromX + ' ' + fromY + ':' + toX + ' ' + toY)
-        let rectSquare = new cv.Rect(fromX, fromY, squareSize - 1, squareSize - 1)
+        let rectSquare = new cv.Rect(fromX, fromY, squareSize, squareSize)
         let square = grayImage.roi(rectSquare)
 
         let centerSquare = parseInt(squareSize / 2)
@@ -119,13 +119,14 @@ export default class Kircher {
 
         let n = row * qrCodeSize + col
         if (encoding[n] !== code.value) {
-          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize, fromY + squareSize - 1), new cv.Scalar(255, 0, 0, 255), 1)
-        } else {
-          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize, fromY + squareSize - 1), new cv.Scalar(0, 255, 0, 255), 1)
+          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(255, 0, 0, 255), -1)
         }
+        cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(0, 0, 0, 255), 1)
       }
     }
 
+    const alpha = 0.5
+    cv.addWeighted(errorImage, alpha, image, 1 - alpha, 0, errorImage)
     cv.imshow('my-canvas-video-2', errorImage)
 
     // free memory
