@@ -64,7 +64,9 @@
     <canvas class="maxCanvasSize" id="my-canvas-video" />
     <canvas class="maxCanvasSize" id="my-canvas-video-1" />
     <canvas class="maxCanvasSize" id="my-canvas-video-2" />
-    <canvas class="maxCanvasSize" id="my-canvas-video-3" />
+    <canvas class="maxCanvasSize" id="my-canvas-error" />
+    <canvas class="maxCanvasSize" id="my-canvas-gray" />
+    <canvas class="maxCanvasSize" id="my-canvas-bit" />
     <button @click="step">Step</button>
     <div class="">
       <div class="">
@@ -81,7 +83,6 @@
 </template>
 
 <script>
-import Hello from './components/Hello'
 import RingButton from './components/RingButton'
 import MaskFinder from './classes/MaskFinder.js'
 import Kircher from './classes/Kircher.js'
@@ -90,7 +91,6 @@ import Settings from './components/Settings.vue'
 export default {
   name: 'app',
   components: {
-    Hello,
     RingButton,
     Settings
   },
@@ -159,7 +159,7 @@ export default {
         }
         try {
           this.stream = await navigator.mediaDevices.getUserMedia(settings)
-          this.video.src = window.URL.createObjectURL(this.stream)
+          this.video.srcObject = this.stream
 
           let self = this
           this.video.onloadedmetadata = function () {
@@ -446,8 +446,9 @@ export default {
         code = Kircher.decode(croppedImage.cropped, this.settings.nRepair)
         this.countErrors(code)
       }
-      alert(code)
-      return code
+      image.delete()
+      // alert(code)
+      return croppedImage
     },
     changeLevelsLight () {
       const value = this.settings.levelsLight

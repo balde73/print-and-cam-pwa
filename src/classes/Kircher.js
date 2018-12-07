@@ -34,7 +34,9 @@ export default class Kircher {
     const width = grayImage.cols
     const qrCodeSize = 64 // 4096 bit
 
-    let errorImage = image.clone()
+    let bitImage = new cv.Mat.zeros(height, width, cv.CV_8UC1) // eslint-disable-line new-cap
+    let errorImage = new cv.Mat()
+    cv.cvtColor(grayImage, errorImage, cv.COLOR_GRAY2RGBA, 4)
 
     console.log(width + 'x' + height)
     if (height !== width) {
@@ -45,8 +47,6 @@ export default class Kircher {
     const squareSize = parseInt(width / qrCodeSize)
     console.log('squareSize: ' + squareSize)
 
-    let focus = new cv.Mat.zeros(squareSize, squareSize, cv.CV_8UC1) // eslint-disable-line new-cap
-
     const maxSizeEncoded = parseInt(64 * 64 / (nRepair * 8))
     let st = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque interdum nec dolor non consectetur. Nam vel euismod mauris. Aliquam sit amet ligula in est rutrum auctor ut ac lorem. Duis blandit convallis pulvinar. Pellentesque sed vestibulum purus. Curabitur lacinia luctus orci ac molestie. Morbi gravida hendrerit neque, non consequat dui eleifend id. Morbi tincidunt nisi enim, vel laoreet magna rutrum vel. Quisque vel ultrices lacus. Sed id diam eget justo rutrum rutrum. Nulla maximus augue ex, at viverra sem venenatis id. Morbi id orci vel enim luctus condimentum. Cras metus neque, ultricies ut condimentum in, euismod in est. Etiam maximus neque vel velit suscipit semper. Pellentesque nec velit odio'
     if (st.length > maxSizeEncoded) {
@@ -55,14 +55,17 @@ export default class Kircher {
     }
     let encoding = Kircher.encodeBinaryString(st)
 
+    cv.medianBlur(grayImage, grayImage, 3)
+
+    let focus = new cv.Mat.zeros(squareSize, squareSize, cv.CV_8UC1) // eslint-disable-line new-cap
     const radius = parseInt(squareSize / 5)
     const center = parseInt(squareSize / 2)
 
     // const box = np.int0([(0, center-radius),(squareSize, center+radius),(squareSize, center+radius),(0, center-radius)])
-    const color = new cv.Scalar(255, 255, 255)
-    cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 90.0, 0.0, 360.0, color, -1)
-    cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 0.0, 0.0, 360.0, color, -1)
-    cv.threshold(focus, focus, 100, 255, cv.THRESH_BINARY_INV)
+    const colorWhite = new cv.Scalar(255, 255, 255)
+    cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 90.0, 0.0, 360.0, colorWhite, -1)
+    cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 0.0, 0.0, 360.0, colorWhite, -1)
+    cv.threshold(focus, focus, 128, 255, cv.THRESH_BINARY_INV)
 
     let fullCode = []
     for (let row = 0; row < qrCodeSize; row++) {
@@ -83,7 +86,7 @@ export default class Kircher {
 
         let avg = cv.mean(centroid)[0]
 
-        let squareBit = new cv.Mat(squareSize, squareSize, cv.CV_8UC4)
+        let squareBit = new cv.Mat(squareSize, squareSize, cv.CV_8UC1)
         cv.threshold(square, squareBit, avg, 255, cv.THRESH_BINARY_INV)
 
         cv.subtract(squareBit, focus, squareBit)
@@ -99,10 +102,9 @@ export default class Kircher {
         }
         if (contour) {
           let line = new cv.Mat()
-          cv.fitLine(contour, line, cv.DIST_L2, 0, 0.01, 0.01) // [vx,vy,x,y]
+          cv.fitLine(contour, line, cv.DIST_L12, 0, 0.01, 0.01) // [vx,vy,x,y]
           let vx = Math.abs(line.data32F[0])
           let vy = Math.abs(line.data32F[1])
-
           code = {
             value: (vx > vy) ? '1' : '0',
             probability: Math.max(vx, vy)
@@ -111,29 +113,33 @@ export default class Kircher {
         }
         fullCode.push(code)
 
+        let n = row * qrCodeSize + col
+
+        squareBit.copyTo(bitImage.roi(rectSquare))
+
+        if (encoding[n] !== code.value) {
+          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(255, 0, 0, 255), -1)
+        }
+        cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(0, 0, 0, 255), 1)
+
         centroid.delete()
         hierarchy.delete()
         contours.delete()
         squareBit.delete()
         square.delete()
-
-        let n = row * qrCodeSize + col
-        if (encoding[n] !== code.value) {
-          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(255, 0, 0, 255), -1)
-        }
-        cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(0, 0, 0, 255), 1)
       }
     }
+    // cv.addWeighted(bitImage, alpha, grayImage, 1 - alpha, 0, grayImage)
 
-    const alpha = 0.5
-    cv.addWeighted(errorImage, alpha, image, 1 - alpha, 0, errorImage)
-    cv.imshow('my-canvas-video-2', errorImage)
+    cv.imshow('my-canvas-error', errorImage)
+    cv.imshow('my-canvas-bit', bitImage)
 
     // free memory
     focus.delete()
     grayImage.delete()
     rgbaPlanes.delete()
     errorImage.delete()
+    image.delete()
 
     fullCode = this.repair(fullCode, nRepair)
     return this.__decodeBinaryString(fullCode)

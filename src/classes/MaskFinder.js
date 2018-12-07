@@ -216,7 +216,7 @@ export default class MaskFinder {
       const minSize = Math.min(width, height)
       const sizeRate = minSizeCnt / minSize
       let cropped = null
-      if (this.__pixelDensity(widthCnt, heightCnt)) {
+      if (this.__pixelDensity(widthCnt, heightCnt) || hardness >= 1) {
         console.log('pixelDensity is good')
         let rect = this.__exploitPoints(bestMask.cnt, resizeRate)
         rect = this.__orderPoints(rect)
@@ -246,7 +246,7 @@ export default class MaskFinder {
 
   __pixelDensity (width, height) {
     const area = width * height
-    const squareArea = area / 3600
+    const squareArea = area / 4096
     return squareArea > 100
   }
 
@@ -302,7 +302,7 @@ export default class MaskFinder {
   __findMask (img) {
     let contours = new cv.MatVector()
     let hierarchy = new cv.Mat()
-    cv.findContours(img, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    cv.findContours(img, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
     hierarchy.delete()
     return this.__bestContour(contours)
   }
@@ -370,7 +370,7 @@ export default class MaskFinder {
   __tooSquishy (rect) {
     // if too squishy probably is not a square
     const {width, height} = rect
-    const maxSquareRation = 2
+    const maxSquareRation = 1.8
     if (width > maxSquareRation * height || height > maxSquareRation * width) {
       return true
     }
