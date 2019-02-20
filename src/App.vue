@@ -4,7 +4,7 @@
       v-bind:settings="settings"
       v-bind:open="openSettings"
       v-on:stopLight="stopAnalyzeLight"
-      v-on:startLight="startRecordingLight"
+      v-on:startLight="startRecording"
       v-on:changeLevels="changeLevelsLight"
       v-on:changeInitialLight="changeInitialLight"
       v-on:nRepairChange="nRepairChange"
@@ -47,10 +47,17 @@
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>preferences</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="4" x2="23" y2="4"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="4" x2="4" y2="4"></line> <rect x="4" y="1" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="22" y1="12" x2="23" y2="12"></line> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="1" y1="12" x2="14" y2="12"></line> <rect data-color="color-2" x="14" y="9" fill="none" stroke-miterlimit="10" width="4" height="6"></rect> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="20" x2="23" y2="20"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="20" x2="4" y2="20"></line> <rect x="4" y="17" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect></g></svg>
         </div>
         <div class="text">
-          light: {{ settings.basicLight }} ({{ percLight }}%) Gyro: {{gyroscope && gyroscope.acc}} Fermo: {{gyroscope && gyroscope.still}}
+          light: {{ settings.basicLight }} ({{ percLight }}%) Gyro: {{gyroscope && gyroscope.acc}} n: {{gyroscope && gyroscope.still}}
         </div>
-        <div class="icon" @click="stopDoingStuff">
-          <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>barcode qr</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,10 1,10 1,1 10,1 10,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,10 14,10 14,1 14,1 23,1 "></polygon> <polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="10,23 1,23 1,14 10,14 10,14 "></polygon> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,19 23,14 19,14 19,17 15,17 15,14 "></polyline> <polyline fill="none" stroke="#ffffff" stroke-miterlimit="10" points="23,23 15,23 15,21 "></polyline> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,6 5,6 5,5 6,5 6,6 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 19,6 18,6 18,6 18,5 19,5 "></polygon> <polygon data-color="color-2" fill="none" stroke-miterlimit="10" points=" 6,19 5,19 5,18 6,18 6,19 "></polygon></g></svg>
+        <div class="icon" @click="toggleMode">
+          <div v-show="!isRecordingMotion">
+            M
+            <div class="small">manual</div>
+          </div>
+          <div v-show="isRecordingMotion">
+            A
+            <div class="small">auto</div>
+          </div>
         </div>
       </div>
       <div class="controls">
@@ -61,7 +68,8 @@
         <RingButton @click.native="snapshot" active="is-magic" v-bind:status="isMagic" />
       </div>
     </div>
-    <canvas class="maxCanvasSize" id="my-canvas-video" />
+    Light:
+    <canvas class="maxCanvasSize" id="my-canvas-video-bw" />
     <canvas class="maxCanvasSize" id="my-canvas-video-1" />
     <canvas class="maxCanvasSize" id="my-canvas-video-2" />
     <canvas class="maxCanvasSize" id="my-canvas-error" />
@@ -106,7 +114,7 @@ export default {
       isMagic: false,
       percLight: 0,
       goodLight: false,
-      timer: null,
+      timerLight: null,
       openCropImage: false,
       galleryFlash: false,
       imgElementSrc: null,
@@ -132,13 +140,14 @@ export default {
       message: null,
       showMessage: false,
       isTracking: false,
+      isRecordingMotion: false,
       gyroscope: null,
       suggestion: null,
       errors: 0
     }
   },
   mounted () {
-    this.startRecordingLight()
+    this.startRecording()
   },
   computed: {
     rangeLevels: function () {
@@ -146,7 +155,7 @@ export default {
     }
   },
   methods: {
-    async startRecordingLight () {
+    async startRecording () {
       this.video = this.$refs.video
       if (navigator.mediaDevices.getUserMedia) {
         const settings = {
@@ -173,21 +182,10 @@ export default {
             self.capture = new cv.VideoCapture(self.video)
             self.maskFinder = new MaskFinder(self.capture, self.settings.levelsLight)
             self.isRecording = true
-            self.analyzeLight()
+            self.startAnalyzeLight()
           }
         } catch (error) {
           alert(error)
-        }
-
-        if (window.DeviceMotionEvent !== undefined) {
-          this.gyroscope = {
-            isMoving: true,
-            acc: 1,
-            still: 0
-          }
-          this.startMotionListener()
-        } else {
-          console.log('device motion not supported')
         }
       } else {
         alert('browser o dispositivo non supportato!')
@@ -214,13 +212,16 @@ export default {
       }
     },
     toggleAnalyzeLight () {
-      if (this.timer != null) {
+      if (this.isRecordingLight()) {
         this.stopAnalyzeLight()
       } else {
-        this.analyzeLight()
+        this.startAnalyzeLight()
       }
     },
-    analyzeLight () {
+    isRecordingLight () {
+      return this.timerLight != null
+    },
+    startAnalyzeLight () {
       let timeRefresh = 50
       if (!this.message) {
         const lightIntensity = parseInt(this.settings.basicLight)
@@ -250,22 +251,37 @@ export default {
           timeRefresh = 500
         }
         if (this.settings.debugMode) {
-          cv.imshow('my-canvas-video', tmp)
+          cv.imshow('my-canvas-video-bw', tmp)
         }
         tmp.delete()
       } else {
         timeRefresh = 500
       }
 
-      this.timer = window.setTimeout(() => {
-        this.analyzeLight()
+      this.timerLight = window.setTimeout(() => {
+        this.startAnalyzeLight()
       }, timeRefresh)
     },
+    stopAnalyzeLight () {
+      console.log('stop light!')
+      window.clearTimeout(this.timerLight)
+      this.timerLight = null
+    },
     startMotionListener () {
-      this.gyroscope.still = 0
-      window.addEventListener('devicemotion', this.processMotion)
+      if (window.DeviceMotionEvent !== undefined) {
+        this.gyroscope = {
+          isMoving: true,
+          acc: 1,
+          still: 0
+        }
+        this.isRecordingMotion = true
+        window.addEventListener('devicemotion', this.processMotion)
+      } else {
+        alert('device motion not supported. Abort auto-shots')
+      }
     },
     stopMotionListener () {
+      this.isRecordingMotion = false
       window.removeEventListener('devicemotion', this.processMotion)
     },
     processMotion (event) {
@@ -296,11 +312,6 @@ export default {
     readMotionData (event) {
       console.log('reading')
     },
-    stopAnalyzeLight () {
-      console.log('stop light!')
-      window.clearTimeout(this.timer)
-      this.timer = null
-    },
     stopRecording () {
       this.isRecording = false
       this.stopAnalyzeLight()
@@ -314,7 +325,7 @@ export default {
       if (this.isRecording) {
         this.stopRecording()
       } else {
-        this.startRecordingLight()
+        this.startRecording()
       }
     },
     searchMask () {
@@ -379,9 +390,21 @@ export default {
       this.message = null
       window.clearTimeout(this.timeoutTracking)
     },
-    stopDoingStuff () {
+    toggleMode () {
+      if (this.isRecordingMotion) {
+        this.startManualMode()
+      } else {
+        this.startAutomaticMode()
+      }
+    },
+    startAutomaticMode () {
+      this.startMotionListener()
+      if (!this.isRecordingLight()) {
+        this.startAnalyzeLight()
+      }
+    },
+    startManualMode () {
       this.stopMotionListener()
-      this.stopAnalyzeLight()
       this.stopTracking()
     },
     async takeGalleryFlash () {
@@ -588,6 +611,9 @@ video{
 }
 .pre-controls .icon{
   padding: 0 2rem;
+}
+.pre-controls .icon .small{
+  font-size: .6rem;
 }
 .controls{
   position: absolute;
