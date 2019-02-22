@@ -23,6 +23,26 @@ export default class Kircher {
     return finalCode
   }
 
+  static qrRead (bitMatrix) {
+    var parser = new BitMatrixParser(bitMatrix)
+    var version = parser.readVersion()
+    console.log('version: ' + version)
+
+    var el = Decoder.decode(bitMatrix)
+    var elByte = el.DataByte
+    var elString = ''
+
+    for (var i = 0; i < elByte.length; i++) {
+      var currentWord = elByte[i]
+      for (var j = 0; j < currentWord.length; j++) {
+        let n = parseInt(currentWord[j])
+        elString += String.fromCharCode(n)
+      }
+    }
+    console.log(elString)
+    return elString
+  }
+
   static decode (image, nRepair) {
     console.log('DECODING!')
 
@@ -32,7 +52,7 @@ export default class Kircher {
 
     const height = grayImage.rows
     const width = grayImage.cols
-    const qrCodeSize = 64 // 4096 bit
+    const qrCodeSize = 29 // 4096 bit
 
     let bitImage = new cv.Mat.zeros(height, width, cv.CV_8UC1) // eslint-disable-line new-cap
     let errorImage = new cv.Mat()
@@ -66,6 +86,9 @@ export default class Kircher {
     cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 90.0, 0.0, 360.0, colorWhite, -1)
     cv.ellipse(focus, new cv.Point(center, center), new cv.Size(center, radius), 0.0, 0.0, 360.0, colorWhite, -1)
     cv.threshold(focus, focus, 128, 255, cv.THRESH_BINARY_INV)
+
+    var bitMatrix = new BitMatrix(qrCodeSize)
+    bitMatrix.clear()
 
     let fullCode = []
     for (let row = 0; row < qrCodeSize; row++) {
@@ -112,6 +135,9 @@ export default class Kircher {
           line.delete()
         }
         fullCode.push(code)
+        if (code.value === '1') {
+          bitMatrix.flip(col, row)
+        }
 
         let n = row * qrCodeSize + col
 
@@ -141,8 +167,9 @@ export default class Kircher {
     errorImage.delete()
     image.delete()
 
-    fullCode = this.repair(fullCode, nRepair)
-    return this.__decodeBinaryString(fullCode)
+    fullCode = this.qrRead(bitMatrix)
+    console.log(fullCode)
+    return fullCode
   }
 
   static __filterContours (contours) {

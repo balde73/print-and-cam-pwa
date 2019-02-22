@@ -26,6 +26,26 @@
           if (file.match(/\.(js|css)$/)) { %>
     <link rel="<%= chunk.initial?'preload':'prefetch' %>" href="<%= htmlWebpackPlugin.files.publicPath + file %>" as="<%= file.match(/\.css$/)?'style':'script' %>"><% }}} %>
     <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
+
+    <!-- qr library -->
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/grid.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/version.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/detector.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/formatinf.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/errorlevel.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/bitmat.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/datablock.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/bmparser.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/datamask.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/rsdecoder.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/gf256poly.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/gf256.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/decoder.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/qrcode.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/findpat.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/alignpat.js"></script>
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/databr.js"></script>
+
     <script src="<%= htmlWebpackPlugin.files.publicPath %>static/js/opencv.js"></script>
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
   </head>

@@ -511,11 +511,11 @@ export default class MaskFinder {
     let dsize = new cv.Size(maxWidth, maxHeight)
     console.log('mw: ' + maxWidth + ', mh: ' + maxHeight)
     cv.warpPerspective(image, warped, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar())
-    const maxSize = 2000 // 1920 + 40 + 40
+    const maxSize = 906 // 870+18+18   prev. 1920 + 40 + 40
     let maxsize = new cv.Size(maxSize, maxSize)
     cv.resize(warped, warped, maxsize, cv.INTER_CUBIC)
 
-    const hb = maxSize / 100 * 2
+    const hb = parseInt(maxSize / 100 * 2)
 
     let cuttingZone = new cv.Rect(hb, hb, parseInt(maxSize - (hb * 2)), parseInt(maxSize - (hb * 2)))
     warped = warped.roi(cuttingZone)
