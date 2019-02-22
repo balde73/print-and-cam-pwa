@@ -1,38 +1,15 @@
 export default class MaskFinder {
-  constructor (capture, levels = 5, initialLight = 50, debugMode = true) {
+  constructor (capture, debugMode = true) {
     this.capture = capture
     this.width = capture.video.width
     this.height = capture.video.height
     this.shot = new cv.Mat(this.height, this.width, cv.CV_8UC4)
-    this.levels = levels
-    this.initialLight = initialLight
     this.mask = null
     this.debugMode = debugMode
   }
   snapshot () {
     this.capture.read(this.shot)
     cv.imshow('shot', this.shot)
-  }
-  setLevels (levels) {
-    this.levels = levels
-  }
-  setInitialLight (light) {
-    this.initialLight = light
-  }
-  getLightLevels () {
-    let initialLight = this.initialLight
-    const steps = this.levels
-    // const maxStep = parseInt((255 - light) / 3 * 2)
-    const maxStep = Math.max(0, initialLight + steps * 10)
-    console.log(initialLight - steps * 10)
-    const step = (initialLight - maxStep) / steps
-    let lightLevels = []
-    for (let i = 0; i < this.levels; i++) {
-      const light = parseInt(initialLight - step * i)
-      lightLevels.push(light)
-    }
-    console.log(lightLevels)
-    return lightLevels
   }
   shotAndSearch () {
     this.capture.read(this.shot)
@@ -206,7 +183,7 @@ export default class MaskFinder {
     let gray = new cv.Mat(height, width, cv.CV_8UC4)
     cv.cvtColor(shotFreeze, gray, cv.COLOR_RGBA2GRAY, 0)
     let bestMask = null
-    bestMask = this.__findMaskManyLevels(gray, hardness)
+    bestMask = this.__findMaskOneStep(gray, hardness)
     gray.delete()
 
     if (bestMask) {
@@ -258,45 +235,21 @@ export default class MaskFinder {
     return false
   }
 
-  __findMaskManyLevels (gray, hardness = 1) {
-    const lightLevels = this.getLightLevels()
-    let tmp = new cv.Mat()
-    let bestPerc = 0
-    let bestMask = null
-    for (let i = 0; i < lightLevels.length; i++) {
-      let level = lightLevels[i]
-      cv.threshold(gray, tmp, level, 255, cv.THRESH_BINARY_INV)
-      if (this.debugMode) {
-        cv.imshow(`bw-threshold-${i}`, tmp)
-      }
-      let mask = this.__findMask(tmp)
+  __findMaskOneStep (gray, hardness = 1) {
+    let grayBlur = new cv.Mat()
+    let blackAndWhite = new cv.Mat()
+    let ksize = new cv.Size(15, 15)
+    cv.GaussianBlur(gray, grayBlur, ksize, 0, 0, cv.BORDER_DEFAULT)
+    cv.adaptiveThreshold(grayBlur, blackAndWhite, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 2)
 
-      /*
-      mask è composto da due cv.Mat che andrebbero probabilmente distrutti
-      TODO: valutare la strategia migliore
-      */
-
-      if (mask != null) {
-        console.log(i + ' > ' + mask.perc)
-        if (mask.perc > bestPerc) {
-          bestPerc = mask.perc
-          bestMask = mask
-          if (hardness <= 1) {
-            break
-          }
-        } else {
-          console.log(i + ' break! (peggioro)')
-          break
-        }
-      } else if (bestMask) {
-        console.log(i + ' break!')
-        break
-      } else {
-        console.log(i + ' nothing found... continue')
-      }
+    if (this.debugMode) {
+      cv.imshow('my-canvas-contours', blackAndWhite)
     }
-    tmp.delete()
-    return bestMask
+
+    let mask = this.__findMask(blackAndWhite)
+    grayBlur.delete()
+    blackAndWhite.delete()
+    return mask
   }
 
   __findMask (img) {

@@ -3,10 +3,6 @@
     <Settings
       v-bind:settings="settings"
       v-bind:open="openSettings"
-      v-on:stopLight="stopAnalyzeLight"
-      v-on:startLight="startRecording"
-      v-on:changeLevels="changeLevelsLight"
-      v-on:changeInitialLight="changeInitialLight"
       v-on:nRepairChange="nRepairChange"
       v-on:closeSettings="closeSettings"
       v-on:changeVibrations="changeVibrations"
@@ -47,7 +43,7 @@
           <svg version="1.1" viewBox="0 0 24 24" xml:space="preserve" width="24" height="24"><title>preferences</title><g stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="4" x2="23" y2="4"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="4" x2="4" y2="4"></line> <rect x="4" y="1" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="22" y1="12" x2="23" y2="12"></line> <line data-color="color-2" fill="none" stroke-miterlimit="10" x1="1" y1="12" x2="14" y2="12"></line> <rect data-color="color-2" x="14" y="9" fill="none" stroke-miterlimit="10" width="4" height="6"></rect> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="12" y1="20" x2="23" y2="20"></line> <line fill="none" stroke="#ffffff" stroke-miterlimit="10" x1="1" y1="20" x2="4" y2="20"></line> <rect x="4" y="17" fill="none" stroke="#ffffff" stroke-miterlimit="10" width="4" height="6"></rect></g></svg>
         </div>
         <div class="text">
-          light: {{ settings.basicLight }} ({{ percLight }}%) Gyro: {{gyroscope && gyroscope.acc}} n: {{gyroscope && gyroscope.still}}
+          Gyro: {{gyroscope && gyroscope.acc}} n: {{gyroscope && gyroscope.still}}
         </div>
         <div class="icon" @click="toggleMode">
           <div v-show="!isRecordingMotion">
@@ -69,10 +65,9 @@
       </div>
     </div>
     Light:
-    <canvas class="maxCanvasSize" id="my-canvas-video-bw" />
+    <canvas class="maxCanvasSize" id="my-canvas-contours" />
     <canvas class="maxCanvasSize" id="my-canvas-video-1" />
     <canvas class="maxCanvasSize" id="my-canvas-video-2" />
-    <canvas class="maxCanvasSize" id="my-canvas-error" />
     <canvas class="maxCanvasSize" id="my-canvas-gray" />
     <canvas class="maxCanvasSize" id="my-canvas-bit" />
     <button @click="step">Step</button>
@@ -83,9 +78,6 @@
         <button @click="cropAndReadCode">Taglia e leggi</button>
         <img id="imageSrc" :src="imgElementSrc" alt="No Image" />
       </div>
-    </div>
-    <div id="bw-threshold-box" class="tools">
-      <canvas v-for="level in rangeLevels" v-bind:key="`id-${level}`" :id="`bw-threshold-${level}`" />
     </div>
   </div>
 </template>
@@ -112,17 +104,11 @@ export default {
       maskFinder: null,
       isRecording: false,
       isMagic: false,
-      percLight: 0,
-      goodLight: false,
-      timerLight: null,
       openCropImage: false,
       galleryFlash: false,
       imgElementSrc: null,
       settings: {
         nRepair: parseInt(this.$cookies.get('nRepair')) || 1,
-        overrideLight: false,
-        basicLight: parseInt(this.$cookies.get('basicLight')) || 70,
-        levelsLight: parseInt(this.$cookies.get('levelsLight')) || 5,
         galleryFlash: false,
         maxVibration: parseInt(this.$cookies.get('maxVibration')) || 30,
         debugMode: true
@@ -148,11 +134,6 @@ export default {
   },
   mounted () {
     this.startRecording()
-  },
-  computed: {
-    rangeLevels: function () {
-      return [...Array(this.settings.levelsLight).keys()]
-    }
   },
   methods: {
     async startRecording () {
@@ -180,9 +161,8 @@ export default {
             console.log(self.realVideoDim)
 
             self.capture = new cv.VideoCapture(self.video)
-            self.maskFinder = new MaskFinder(self.capture, self.settings.levelsLight)
+            self.maskFinder = new MaskFinder(self.capture)
             self.isRecording = true
-            self.startAnalyzeLight()
           }
         } catch (error) {
           alert(error)
@@ -211,62 +191,6 @@ export default {
         height: height
       }
     },
-    toggleAnalyzeLight () {
-      if (this.isRecordingLight()) {
-        this.stopAnalyzeLight()
-      } else {
-        this.startAnalyzeLight()
-      }
-    },
-    isRecordingLight () {
-      return this.timerLight != null
-    },
-    startAnalyzeLight () {
-      let timeRefresh = 50
-      if (!this.message) {
-        const lightIntensity = parseInt(this.settings.basicLight)
-        let tmp = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
-        this.capture.read(tmp)
-        cv.cvtColor(tmp, tmp, cv.COLOR_RGBA2GRAY, 0)
-        cv.threshold(tmp, tmp, lightIntensity, 255, cv.THRESH_BINARY_INV)
-        const whitePixels = cv.countNonZero(tmp)
-        const totalPixels = this.video.height * this.video.width
-        const perc = parseInt(whitePixels / totalPixels * 100)
-        this.percLight = perc
-
-        if (perc < 20 && this.settings.basicLight < 240) {
-          this.goodLight = false
-          this.settings.basicLight += 10
-        } else if (perc > 30 && this.settings.basicLight < 10) {
-          this.goodLight = false
-          this.settings.basicLight -= 7
-        } else {
-          this.goodLight = true
-          this.maskFinder.setInitialLight(this.settings.basicLight)
-          if (this.settings.basicLight <= 10) {
-            this.suggestion = 'probably too dark'
-          } else if (this.settings.basicLight >= 240) {
-            this.suggestion = 'probably too light'
-          }
-          timeRefresh = 500
-        }
-        if (this.settings.debugMode) {
-          cv.imshow('my-canvas-video-bw', tmp)
-        }
-        tmp.delete()
-      } else {
-        timeRefresh = 500
-      }
-
-      this.timerLight = window.setTimeout(() => {
-        this.startAnalyzeLight()
-      }, timeRefresh)
-    },
-    stopAnalyzeLight () {
-      console.log('stop light!')
-      window.clearTimeout(this.timerLight)
-      this.timerLight = null
-    },
     startMotionListener () {
       if (window.DeviceMotionEvent !== undefined) {
         this.gyroscope = {
@@ -287,9 +211,6 @@ export default {
     processMotion (event) {
       const acc = Math.abs(event.acceleration.x) + Math.abs(event.acceleration.y) + Math.abs(event.acceleration.z)
       const percAcc = parseInt(acc * 100)
-      if (!this.goodLight) {
-        return 0
-      }
       if (percAcc < this.settings.maxVibration) {
         this.gyroscope.still += 1
         if (this.gyroscope.still > 10) {
@@ -314,7 +235,6 @@ export default {
     },
     stopRecording () {
       this.isRecording = false
-      this.stopAnalyzeLight()
       this.stopTracking()
       this.stopMotionListener()
       this.stream.getVideoTracks().forEach(function (track) {
@@ -399,9 +319,6 @@ export default {
     },
     startAutomaticMode () {
       this.startMotionListener()
-      if (!this.isRecordingLight()) {
-        this.startAnalyzeLight()
-      }
     },
     startManualMode () {
       this.stopMotionListener()
@@ -461,7 +378,6 @@ export default {
     },
     cropAndReadCode () {
       let image = cv.imread('imageSrc')
-      this.maskFinder.setInitialLight(100)
       let croppedImage = this.maskFinder.search(image, 100)
       console.log(croppedImage)
       let code = null
@@ -472,16 +388,6 @@ export default {
       image.delete()
       // alert(code)
       return croppedImage
-    },
-    changeLevelsLight () {
-      const value = this.settings.levelsLight
-      this.$cookies.set('levelsLight', value)
-      this.maskFinder.setLevels(value)
-    },
-    changeInitialLight () {
-      const value = this.settings.basicLight
-      this.$cookies.set('basicLight', value)
-      this.maskFinder.setInitialLight(value)
     },
     closeSettings () {
       this.openSettings = false

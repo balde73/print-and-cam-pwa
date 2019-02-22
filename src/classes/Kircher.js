@@ -157,7 +157,7 @@ export default class Kircher {
     }
     // cv.addWeighted(bitImage, alpha, grayImage, 1 - alpha, 0, grayImage)
 
-    cv.imshow('my-canvas-error', errorImage)
+    cv.imshow('my-canvas-gray', grayImage)
     cv.imshow('my-canvas-bit', bitImage)
 
     // free memory

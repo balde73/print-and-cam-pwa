@@ -10,18 +10,6 @@
         <input type="checkbox" @change="$emit('debugModeChange')" v-model="settings.debugMode" />
       </div>
       <div class="inline-input">
-        <label>Override light</label>
-        <input type="checkbox" @change="toggleLight" v-model="settings.overrideLight" />
-      </div>
-      <div class="inline-input" v-show="settings.overrideLight">
-        <label>Initial light</label>
-        <input type="number" min="0" max="255" @change="$emit('changeInitialLight')" v-model.number="settings.basicLight" />
-      </div>
-      <div class="inline-input">
-        <label>Light levels</label>
-        <input type="number" min="1" max="20" @change="$emit('changeLevels')" v-model.number="settings.levelsLight" />
-      </div>
-      <div class="inline-input">
         <label>Max vibration</label>
         <input type="number" min="1" max="200" @change="$emit('changeVibrations')" v-model.number="settings.maxVibration" />
       </div>
@@ -43,12 +31,6 @@ export default {
   computed: {
     isOpen () {
       return this.open
-    }
-  },
-  methods: {
-    toggleLight () {
-      const event = this.settings.overrideLight ? 'stopLight' : 'startLight'
-      this.$emit(event)
     }
   }
 }
