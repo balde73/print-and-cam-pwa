@@ -165,7 +165,9 @@ export default {
             self.maskFinder = new MaskFinder(self.capture)
             self.isRecording = true
 
-            self.changeTorchValue(true)
+            window.setTimeout(() => (
+              self.changeTorchValue(true)
+            ), 100)
           }
         } catch (error) {
           alert(error)
@@ -242,7 +244,9 @@ export default {
     changeTorchValue (torchValue) {
       let track = this.stream.getVideoTracks()[0]
 
-      capabilities = track.getCapabilities()
+      console.log(track)
+
+      let capabilities = track.getCapabilities()
       console.log(capabilities)
 
       console.log(track)
