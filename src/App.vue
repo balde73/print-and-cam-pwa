@@ -150,7 +150,6 @@ export default {
         }
         try {
           this.stream = await navigator.mediaDevices.getUserMedia(settings)
-          this.changeTorchValue(true)
           this.video.srcObject = this.stream
 
           let self = this
@@ -165,6 +164,8 @@ export default {
             self.capture = new cv.VideoCapture(self.video)
             self.maskFinder = new MaskFinder(self.capture)
             self.isRecording = true
+
+            self.changeTorchValue(true)
           }
         } catch (error) {
           alert(error)
@@ -240,6 +241,10 @@ export default {
     },
     changeTorchValue (torchValue) {
       let track = this.stream.getVideoTracks()[0]
+
+      capabilities = track.getCapabilities()
+      console.log(capabilities)
+
       console.log(track)
       track.applyConstraints({
         advanced: [{torch: torchValue}]
@@ -250,6 +255,7 @@ export default {
         })
         .catch(e => {
           this.torchValue = false
+          console.log(e)
           console.log('impossible to start flash')
         })
     },
@@ -285,7 +291,7 @@ export default {
       this.capture.read(shot)
       let mask = this.maskFinder.search(shot, 100)
       if (mask && mask.cropped) {
-        this.suggestion = 'messaggio decodificato'
+        this.suggestion = 'codice trovato'
         this.decodeImage(mask.cropped)
       } else {
         this.suggestion = 'più vicino'
@@ -360,8 +366,8 @@ export default {
     decodeImage (image) {
       this.takeGalleryFlash()
       cv.imshow('canvasTransform', image)
-      this.message = Kircher.decode(image, this.settings.nRepair)
-      this.countErrors(this.message)
+      this.message = Kircher.decode(image)
+      // this.countErrors(this.message)
       image.delete()
     },
     countErrors (message) {
