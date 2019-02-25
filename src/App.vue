@@ -126,6 +126,7 @@ export default {
       message: null,
       showMessage: false,
       isTracking: false,
+      torchValue: false,
       isRecordingMotion: false,
       gyroscope: null,
       suggestion: null,
@@ -149,6 +150,7 @@ export default {
         }
         try {
           this.stream = await navigator.mediaDevices.getUserMedia(settings)
+          this.changeTorchValue(true)
           this.video.srcObject = this.stream
 
           let self = this
@@ -232,6 +234,24 @@ export default {
     },
     readMotionData (event) {
       console.log('reading')
+    },
+    toggleFlash () {
+      this.changeTorchValue(!this.torchValue)
+    },
+    changeTorchValue (torchValue) {
+      let track = this.stream.getVideoTracks()[0]
+      console.log(track)
+      track.applyConstraints({
+        advanced: [{torch: torchValue}]
+      })
+        .then(() => {
+          this.torchValue = true
+          console.log('flash is open')
+        })
+        .catch(e => {
+          this.torchValue = false
+          console.log('impossible to start flash')
+        })
     },
     stopRecording () {
       this.isRecording = false
