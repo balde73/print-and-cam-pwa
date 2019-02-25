@@ -45,6 +45,14 @@
         <div class="text">
           Gyro: {{gyroscope && gyroscope.acc}} n: {{gyroscope && gyroscope.still}}
         </div>
+        <div class="icon" @click="toggleTorch">
+          <div class="" v-show="isTorchOn">
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 48 48" xml:space="preserve" width="24" height="24"><title>flash 21</title><g class="nc-icon-wrapper"><path fill="#EFD358" d="M19.99951,45c-0.16113,0-0.32373-0.03906-0.47314-0.11914c-0.40283-0.2168-0.60742-0.67969-0.49658-1.12354 L22.71924,29H6c-0.39648,0-0.75586-0.23438-0.91553-0.59717C4.9248,28.03955,4.99512,27.6167,5.2627,27.32422l22-24 c0.30957-0.3374,0.80811-0.42188,1.21094-0.20508s0.60742,0.67969,0.49658,1.12354L25.28076,19H42 c0.39648,0,0.75586,0.23438,0.91553,0.59717c0.15967,0.36328,0.08936,0.78613-0.17822,1.07861l-22,24 C20.54248,44.8877,20.27295,45,19.99951,45z"/></g></svg>
+          </div>
+          <div class="" v-show="!isTorchOn">
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 64 64" xml:space="preserve" width="24" height="24"><title>flash 21</title><g class="nc-icon-wrapper" stroke-linecap="square" stroke-linejoin="miter" stroke-width="2" fill="#ffffff" stroke="#ffffff"><polygon fill="none" stroke="#ffffff" stroke-miterlimit="10" points="38,6 9,38 30,38 26,58 55,26 34,26 "/></g></svg>
+          </div>
+        </div>
         <div class="icon" @click="toggleMode">
           <div v-show="!isRecordingMotion">
             M
@@ -126,7 +134,7 @@ export default {
       message: null,
       showMessage: false,
       isTracking: false,
-      torchValue: false,
+      isTorchOn: false,
       isRecordingMotion: false,
       gyroscope: null,
       suggestion: null,
@@ -238,27 +246,20 @@ export default {
     readMotionData (event) {
       console.log('reading')
     },
-    toggleFlash () {
-      this.changeTorchValue(!this.torchValue)
+    toggleTorch () {
+      this.changeTorchValue(!this.isTorchOn)
     },
     changeTorchValue (torchValue) {
       let track = this.stream.getVideoTracks()[0]
 
-      console.log(track)
-
-      let capabilities = track.getCapabilities()
-      console.log(capabilities)
-
-      console.log(track)
       track.applyConstraints({
         advanced: [{torch: torchValue}]
       })
         .then(() => {
-          this.torchValue = true
-          console.log('flash is open')
+          this.isTorchOn = torchValue
+          console.log('flash value is now: ' + torchValue)
         })
         .catch(e => {
-          this.torchValue = false
           console.log(e)
           console.log('impossible to start flash')
         })
@@ -544,12 +545,16 @@ video{
   align-items: center;
   color: #9369ff;
   z-index: 300;
+  background: black;
 }
 .pre-controls .icon{
-  padding: 0 2rem;
+  padding: 0 1rem;
 }
 .pre-controls .icon .small{
   font-size: .6rem;
+}
+.pre-controls .text{
+  flex: 1;
 }
 .controls{
   position: absolute;
@@ -564,6 +569,7 @@ video{
   align-items: center;
   justify-content: center;
   z-index: 300;
+  background: black;
 }
 .gallery{
   margin: 2vh;
