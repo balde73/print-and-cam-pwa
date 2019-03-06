@@ -22,7 +22,7 @@
             </div>
             -------
             <div class="">
-              {{ errors }}
+              {{ findingTime }}s - {{ decodingTime }}s
             </div>
           </div>
         </div>
@@ -138,7 +138,9 @@ export default {
       isRecordingMotion: false,
       gyroscope: null,
       suggestion: null,
-      errors: 0
+      errors: 0,
+      decodingTime: 0,
+      findingTime: 0
     }
   },
   mounted () {
@@ -292,12 +294,17 @@ export default {
     },
     tryFullDecoding () {
       // the algorithm is still tracking the object
+      const startTime = new Date()
       let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(shot)
       let mask = this.maskFinder.search(shot, 100)
       if (mask && mask.cropped) {
+        const intermediateTime = new Date()
+        this.findingTime = (intermediateTime - startTime) / 1000
+        console.log(this.findingTime)
         this.suggestion = 'codice trovato'
         this.decodeImage(mask.cropped)
+        this.decodingTime = (new Date() - intermediateTime) / 1000
       } else {
         this.suggestion = 'più vicino'
       }
@@ -372,8 +379,6 @@ export default {
       this.takeGalleryFlash()
       cv.imshow('canvasTransform', image)
       this.message = Kircher.decode(image)
-      // this.countErrors(this.message)
-      image.delete()
     },
     countErrors (message) {
       // just for testing!
