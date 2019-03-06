@@ -303,12 +303,12 @@ export default {
     },
     shotAndFullDecode () {
       let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
+      this.capture.read(shot)
       this.tryFullDecode(shot)
     },
     tryFullDecode (shot) {
       // the algorithm is still tracking the object
       const startTime = new Date()
-      this.capture.read(shot)
       let mask = this.maskFinder.search(shot, 100)
       if (mask && mask.cropped) {
         const intermediateTime = new Date()
