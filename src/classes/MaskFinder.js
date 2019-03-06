@@ -159,6 +159,8 @@ export default class MaskFinder {
   }
 
   search (photo, hardness = 1) {
+    const startTime = new Date()
+    let returnObj = null
     let width = photo.cols
     let height = photo.rows
     console.log('searchSize: ' + width + 'x' + height)
@@ -184,6 +186,7 @@ export default class MaskFinder {
     cv.cvtColor(shotFreeze, gray, cv.COLOR_RGBA2GRAY, 0)
     let bestMask = null
     bestMask = this.__findMaskOneStep(gray, hardness)
+    const intermediateTime = new Date()
     gray.delete()
 
     if (bestMask) {
@@ -199,15 +202,19 @@ export default class MaskFinder {
         rect = this.__orderPoints(rect)
         cropped = this.__crop(photo, rect)
       }
-      shotFreeze.delete()
-      return {
+      returnObj = {
         cropped: cropped,
         rect: this.__exploitRect(bestMask.rect, resizeRate),
         sizeRate: sizeRate
       }
     }
+    const endTime = new Date()
+    const duration = (endTime - startTime) / 1000
+    const intermediateDuration = (intermediateTime - startTime) / 1000
+    console.log('lines: ' + intermediateDuration)
+    console.log('search: ' + duration)
     shotFreeze.delete()
-    return null
+    return returnObj
   }
 
   setDebugMode (value) {
@@ -238,9 +245,9 @@ export default class MaskFinder {
   __findMaskOneStep (gray, hardness = 1) {
     let grayBlur = new cv.Mat()
     let blackAndWhite = new cv.Mat()
-    let ksize = new cv.Size(15, 15)
+    let ksize = new cv.Size(25, 25)
     cv.GaussianBlur(gray, grayBlur, ksize, 0, 0, cv.BORDER_DEFAULT)
-    cv.adaptiveThreshold(grayBlur, blackAndWhite, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 21, 2)
+    cv.adaptiveThreshold(grayBlur, blackAndWhite, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
 
     if (this.debugMode) {
       cv.imshow('my-canvas-contours', blackAndWhite)
@@ -436,40 +443,23 @@ export default class MaskFinder {
     let {tl, tr, br, bl} = rect
     let origin = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y])
 
-    // compute the width of the new image, which will be the
-    // maximum distance between bottom-right and bottom-left
-    // x-coordiates or the top-right and top-left x-coordinates
-    const widthA = Math.sqrt(((br.x - bl.x) ** 2) + ((br.y - bl.y) ** 2))
-    const widthB = Math.sqrt(((tr.x - tl.x) ** 2) + ((tr.y - tl.y) ** 2))
-    const maxWidth = Math.max(parseInt(widthA), parseInt(widthB))
-
-    // compute the height of the new image, which will be the
-    // maximum distance between the top-right and bottom-right
-    // y-coordinates or the top-left and bottom-left y-coordinates
-    const heightA = Math.sqrt(((tr.x - br.x) ** 2) + ((tr.y - br.y) ** 2))
-    const heightB = Math.sqrt(((tl.x - bl.x) ** 2) + ((tl.y - bl.y) ** 2))
-    const maxHeight = Math.max(parseInt(heightA), parseInt(heightB))
+    const maxSize = 906 // 870+18+18   prev. 1920 + 40 + 40
+    let dsize = new cv.Size(maxSize, maxSize)
 
     // now that we have the dimensions of the new image, construct
     // the set of destination points to obtain a 'birds eye view',
     // (i.e. top-down view) of the image, again specifying points
     // in the top-left, top-right, bottom-right, and bottom-left
     // order
-    let dst = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, maxWidth - 1, 0, maxWidth - 1, maxHeight - 1, 0, maxHeight - 1])
+    let dst = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, maxSize - 1, 0, maxSize - 1, maxSize - 1, 0, maxSize - 1])
 
     // compute the perspective transform matrix and then apply it
     let M = cv.getPerspectiveTransform(origin, dst)
 
     let warped = new cv.Mat()
-    let dsize = new cv.Size(maxWidth, maxHeight)
-    console.log('mw: ' + maxWidth + ', mh: ' + maxHeight)
     cv.warpPerspective(image, warped, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar())
-    const maxSize = 906 // 870+18+18   prev. 1920 + 40 + 40
-    let maxsize = new cv.Size(maxSize, maxSize)
-    cv.resize(warped, warped, maxsize, cv.INTER_CUBIC)
 
     const hb = parseInt(maxSize / 100 * 2)
-
     let cuttingZone = new cv.Rect(hb, hb, parseInt(maxSize - (hb * 2)), parseInt(maxSize - (hb * 2)))
     warped = warped.roi(cuttingZone)
 

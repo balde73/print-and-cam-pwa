@@ -2,6 +2,9 @@
   <div class="modal" :class="{'is-open': isOpen}">
     <div class="modal-content">
       <div class="inline-input">
+        Version: 1.1.5
+      </div>
+      <div class="inline-input">
         <label>Repair number</label>
         <input type="number" min="1" max="10" @change="$emit('nRepairChange')" v-model.number="settings.nRepair" />
       </div>

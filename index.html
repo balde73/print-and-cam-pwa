@@ -27,6 +27,9 @@
     <link rel="<%= chunk.initial?'preload':'prefetch' %>" href="<%= htmlWebpackPlugin.files.publicPath + file %>" as="<%= file.match(/\.css$/)?'style':'script' %>"><% }}} %>
     <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
 
+    <!-- adapter -->
+    <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/adapterVideo.js"></script>
+
     <!-- qr library -->
     <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/grid.js"></script>
     <script type="text/javascript" src="<%= htmlWebpackPlugin.files.publicPath %>static/js/version.js"></script>

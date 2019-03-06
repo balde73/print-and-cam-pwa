@@ -43,8 +43,9 @@ export default class Kircher {
     return elString
   }
 
-  static decode (image, nRepair) {
+  static decode (image) {
     console.log('DECODING!')
+    const startTime = new Date()
 
     let rgbaPlanes = new cv.MatVector()
     cv.split(image, rgbaPlanes)
@@ -66,14 +67,6 @@ export default class Kircher {
 
     const squareSize = parseInt(width / qrCodeSize)
     console.log('squareSize: ' + squareSize)
-
-    const maxSizeEncoded = parseInt(64 * 64 / (nRepair * 8))
-    let st = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque interdum nec dolor non consectetur. Nam vel euismod mauris. Aliquam sit amet ligula in est rutrum auctor ut ac lorem. Duis blandit convallis pulvinar. Pellentesque sed vestibulum purus. Curabitur lacinia luctus orci ac molestie. Morbi gravida hendrerit neque, non consequat dui eleifend id. Morbi tincidunt nisi enim, vel laoreet magna rutrum vel. Quisque vel ultrices lacus. Sed id diam eget justo rutrum rutrum. Nulla maximus augue ex, at viverra sem venenatis id. Morbi id orci vel enim luctus condimentum. Cras metus neque, ultricies ut condimentum in, euismod in est. Etiam maximus neque vel velit suscipit semper. Pellentesque nec velit odio'
-    if (st.length > maxSizeEncoded) {
-      // cut the encoding
-      st = st.substring(0, maxSizeEncoded)
-    }
-    let encoding = Kircher.encodeBinaryString(st)
 
     cv.medianBlur(grayImage, grayImage, 3)
 
@@ -139,14 +132,10 @@ export default class Kircher {
           bitMatrix.flip(col, row)
         }
 
-        let n = row * qrCodeSize + col
-
         squareBit.copyTo(bitImage.roi(rectSquare))
 
-        if (encoding[n] !== code.value) {
-          cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(255, 0, 0, 255), -1)
-        }
-        cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(0, 0, 0, 255), 1)
+        // let n = row * qrCodeSize + col
+        // cv.rectangle(errorImage, new cv.Point(fromX, fromY), new cv.Point(fromX + squareSize - 1, fromY + squareSize - 1), new cv.Scalar(0, 0, 0, 255), 1)
 
         centroid.delete()
         hierarchy.delete()
@@ -167,8 +156,15 @@ export default class Kircher {
     errorImage.delete()
     image.delete()
 
-    fullCode = this.qrRead(bitMatrix)
+    try {
+      fullCode = this.qrRead(bitMatrix)
+    } catch (e) {
+      fullCode = ''
+    }
     console.log(fullCode)
+    const endTime = new Date()
+    const duration = (endTime - startTime) / 1000
+    console.log('decoding: ' + duration)
     return fullCode
   }
 

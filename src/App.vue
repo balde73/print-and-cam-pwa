@@ -147,7 +147,7 @@ export default {
   methods: {
     async startRecording () {
       this.video = this.$refs.video
-      if (navigator.mediaDevices.getUserMedia) {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const settings = {
           video: {
             width: { ideal: 4096 },
