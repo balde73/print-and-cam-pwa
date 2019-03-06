@@ -72,21 +72,22 @@
         <RingButton @click.native="snapshot" active="is-magic" v-bind:status="isMagic" />
       </div>
     </div>
-    Light:
+    <div class="">
+      <div class="">
+        <div class="">
+          Per una maggiore risoluzione scatta una foto utilizzando i pulsanti sotto
+        </div>
+        <input @change="imgUpload" type="file" id="fileInput" accept="image/*" capture="environment" />
+        <button @click="cropAndReadCode">Decodifica</button>
+        <img id="imageSrc" :src="imgElementSrc" alt="No Image" />
+      </div>
+    </div>
     <canvas class="maxCanvasSize" id="my-canvas-contours" />
     <canvas class="maxCanvasSize" id="my-canvas-video-1" />
     <canvas class="maxCanvasSize" id="my-canvas-video-2" />
     <canvas class="maxCanvasSize" id="my-canvas-gray" />
     <canvas class="maxCanvasSize" id="my-canvas-bit" />
     <button @click="step">Step</button>
-    <div class="">
-      <div class="">
-        Carica foto: <input @change="imgUpload" type="file" id="fileInput" name="file" />
-        <button @click="readCode">Leggi</button>
-        <button @click="cropAndReadCode">Taglia e leggi</button>
-        <img id="imageSrc" :src="imgElementSrc" alt="No Image" />
-      </div>
-    </div>
   </div>
 </template>
 
@@ -416,13 +417,13 @@ export default {
       let image = cv.imread('imageSrc')
       let croppedImage = this.maskFinder.search(image, 100)
       console.log(croppedImage)
-      let code = null
+      let code = 'non trovato'
       if (croppedImage.cropped) {
         code = Kircher.decode(croppedImage.cropped, this.settings.nRepair)
         this.countErrors(code)
       }
       image.delete()
-      // alert(code)
+      alert(code)
       return croppedImage
     },
     closeSettings () {
@@ -607,5 +608,11 @@ video{
 }
 .tools canvas{
   max-height: 50vw;
+}
+#imageSrc{
+  opacity: 0;
+  position: fixed;
+  bottom: -10px;
+  z-index: -10;
 }
 </style>
