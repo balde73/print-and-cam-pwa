@@ -1,5 +1,8 @@
 <template>
   <div id="app">
+    <div class="modal-error" v-show="isLoading">
+      {{ textModal }}
+    </div>
     <Settings
       v-bind:settings="settings"
       v-bind:open="openSettings"
@@ -15,7 +18,7 @@
           marginTop: - this.realVideoDim.height / 2 + 'px',
           marginLeft: - this.realVideoDim.width / 2 + 'px',
         }">
-        <div class="tooltip" v-show="message">
+        <div class="tooltip" v-show="message" @click="cleanMessage">
           <div class="text">
             <div class="">
               {{ message }}
@@ -75,7 +78,7 @@
     <div class="">
       <div class="">
         <div class="">
-          Per una maggiore risoluzione scatta una foto utilizzando i pulsanti sotto
+          For better results take a picture using the native camera here:
         </div>
         <input @change="imgUpload" type="file" id="fileInput" accept="image/*" capture="environment" />
         <button @click="cropAndReadCode">Decodifica</button>
@@ -119,7 +122,7 @@ export default {
       settings: {
         nRepair: parseInt(this.$cookies.get('nRepair')) || 1,
         galleryFlash: false,
-        maxVibration: parseInt(this.$cookies.get('maxVibration')) || 30,
+        maxVibration: parseInt(this.$cookies.get('maxVibration')) || 50,
         debugMode: true
       },
       timeoutTracking: null,
@@ -141,7 +144,9 @@ export default {
       suggestion: null,
       errors: 0,
       decodingTime: 0,
-      findingTime: 0
+      findingTime: 0,
+      isLoading: true,
+      textModal: 'Loading...'
     }
   },
   mounted () {
@@ -165,6 +170,8 @@ export default {
 
           let self = this
           this.video.onloadedmetadata = function () {
+            self.isLoading = false
+
             self.video.height = this.videoHeight
             self.video.width = this.videoWidth
             self.videoHeight = this.videoHeight
@@ -182,9 +189,10 @@ export default {
           }
         } catch (error) {
           alert(error)
+          this.textModal = ':('
         }
       } else {
-        alert('browser o dispositivo non supportato!')
+        this.textModal = 'Browser non supportato :('
       }
     },
     videoDimensions (video) {
@@ -229,13 +237,13 @@ export default {
       const percAcc = parseInt(acc * 100)
       if (percAcc < this.settings.maxVibration) {
         this.gyroscope.still += 1
-        if (this.gyroscope.still > 10) {
+        if (this.gyroscope.still > 5) {
           if (!this.isTracking) {
             this.gyroscope.still = 0
             this.searchMask()
-          } else if (!this.message && this.gyroscope.still > 30) {
+          } else if (!this.message && this.gyroscope.still > 10) {
             this.gyroscope.still = 0
-            this.tryFullDecoding()
+            this.shotAndFullDecode()
           }
         }
       } else {
@@ -293,10 +301,13 @@ export default {
         this.suggestion = 'avvicinati per decodificare'
       }
     },
-    tryFullDecoding () {
+    shotAndFullDecode () {
+      let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
+      this.tryFullDecode(shot)
+    },
+    tryFullDecode (shot) {
       // the algorithm is still tracking the object
       const startTime = new Date()
-      let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(shot)
       let mask = this.maskFinder.search(shot, 100)
       if (mask && mask.cropped) {
@@ -314,7 +325,7 @@ export default {
       this.isMagic = true
       this.stopTracking()
       window.setTimeout(() => {
-        this.tryFullDecoding()
+        this.shotAndFullDecode()
         this.isMagic = false
       }, 100)
     },
@@ -348,6 +359,9 @@ export default {
       this.isTracking = false
       this.message = null
       window.clearTimeout(this.timeoutTracking)
+    },
+    cleanMessage () {
+      this.message = null
     },
     toggleMode () {
       if (this.isRecordingMotion) {
@@ -415,16 +429,7 @@ export default {
     },
     cropAndReadCode () {
       let image = cv.imread('imageSrc')
-      let croppedImage = this.maskFinder.search(image, 100)
-      console.log(croppedImage)
-      let code = 'non trovato'
-      if (croppedImage.cropped) {
-        code = Kircher.decode(croppedImage.cropped, this.settings.nRepair)
-        this.countErrors(code)
-      }
-      image.delete()
-      alert(code)
-      return croppedImage
+      this.tryFullDecode(image)
     },
     closeSettings () {
       this.openSettings = false
@@ -525,12 +530,13 @@ video{
   background-color: greenyellow;
 }
 .tooltip{
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   padding: 1rem;
   box-sizing: border-box;
+  border: 1px solid black;
 }
 .tooltip .text{
   background-color: white;
@@ -614,5 +620,17 @@ video{
   position: fixed;
   bottom: -10px;
   z-index: -10;
+}
+.modal-error{
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  width: 100vw;
+  background-color: darkslateblue;
+  color: white;
+  font-size: 3rem;
+  text-align: center;
+  padding-top: 20vh;
+  z-index: 1000;
 }
 </style>

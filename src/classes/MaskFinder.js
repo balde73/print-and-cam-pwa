@@ -245,7 +245,7 @@ export default class MaskFinder {
   __findMaskOneStep (gray, hardness = 1) {
     let grayBlur = new cv.Mat()
     let blackAndWhite = new cv.Mat()
-    let ksize = new cv.Size(25, 25)
+    let ksize = new cv.Size(15, 15)
     cv.GaussianBlur(gray, grayBlur, ksize, 0, 0, cv.BORDER_DEFAULT)
     cv.adaptiveThreshold(grayBlur, blackAndWhite, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2)
 
@@ -277,8 +277,7 @@ export default class MaskFinder {
       let cnt = contours.get(i)
       // You can try more different parameters
       const contourRect = cv.boundingRect(cnt)
-      const elem = this.__contourOK(contourRect)
-      if (elem) {
+      if (this.__contourOK(contourRect)) {
         let tmp = new cv.Mat()
         let peri = cv.arcLength(cnt, true)
         cv.approxPolyDP(cnt, tmp, 0.01 * peri, true)
