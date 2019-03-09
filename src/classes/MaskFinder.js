@@ -443,7 +443,8 @@ export default class MaskFinder {
     let origin = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y])
 
     const finalSize = qrCodeSize * 30
-    const maxSize = parseInt(finalSize + (finalSize * (2 / 96))) // 870+18+18   prev. 1920 + 40 + 40
+    const hb = parseInt(finalSize * (2 / 96)) // 1470 + 30 + 30 = 1530
+    const maxSize = finalSize + (hb * 2) // 870+18+18   prev. 1920 + 40 + 40
     let dsize = new cv.Size(maxSize, maxSize)
 
     // now that we have the dimensions of the new image, construct
@@ -459,7 +460,6 @@ export default class MaskFinder {
     let warped = new cv.Mat()
     cv.warpPerspective(image, warped, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar())
 
-    const hb = parseInt(maxSize / 100 * 2)
     let cuttingZone = new cv.Rect(hb, hb, parseInt(maxSize - (hb * 2)), parseInt(maxSize - (hb * 2)))
     warped = warped.roi(cuttingZone)
 
