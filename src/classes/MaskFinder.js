@@ -158,7 +158,7 @@ export default class MaskFinder {
     }
   }
 
-  search (photo, hardness = 1) {
+  search (photo, qrCodeSize, hardness = 1) {
     const startTime = new Date()
     let returnObj = null
     let width = photo.cols
@@ -200,7 +200,7 @@ export default class MaskFinder {
         console.log('pixelDensity is good')
         let rect = this.__exploitPoints(bestMask.cnt, resizeRate)
         rect = this.__orderPoints(rect)
-        cropped = this.__crop(photo, rect)
+        cropped = this.__crop(photo, rect, qrCodeSize)
       }
       returnObj = {
         cropped: cropped,
@@ -222,8 +222,8 @@ export default class MaskFinder {
   }
 
   // private methods
-  __crop (img, bestMask) {
-    const cropped = this.__fourPointTransform(img, bestMask)
+  __crop (img, bestMask, qrCodeSize) {
+    const cropped = this.__fourPointTransform(img, bestMask, qrCodeSize)
     cv.imshow('canvasTransform', cropped)
     return cropped
   }
@@ -435,14 +435,15 @@ export default class MaskFinder {
     return rect
   }
 
-  __fourPointTransform (image, rect) {
+  __fourPointTransform (image, rect, qrCodeSize) {
     // obtain a consistent order of the points and unpack them individually
     // rect = __orderPoints(pts)
 
     let {tl, tr, br, bl} = rect
     let origin = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y])
 
-    const maxSize = 906 // 870+18+18   prev. 1920 + 40 + 40
+    const finalSize = qrCodeSize * 30
+    const maxSize = parseInt(finalSize + (finalSize * (2 / 96))) // 870+18+18   prev. 1920 + 40 + 40
     let dsize = new cv.Size(maxSize, maxSize)
 
     // now that we have the dimensions of the new image, construct

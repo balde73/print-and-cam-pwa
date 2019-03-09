@@ -299,7 +299,7 @@ export default {
       this.stopTracking()
       let shot = new cv.Mat(this.video.height, this.video.width, cv.CV_8UC4)
       this.capture.read(shot)
-      let mask = this.maskFinder.search(shot)
+      let mask = this.maskFinder.search(shot, this.settings.qrCodeSize)
       if (mask) {
         if (this.settings.iWantToTrack) {
           this.maskFinder.studyPortion(shot, mask.rect)
@@ -317,7 +317,7 @@ export default {
     tryFullDecode (shot) {
       // the algorithm is still tracking the object
       const startTime = new Date()
-      let mask = this.maskFinder.search(shot, 100)
+      let mask = this.maskFinder.search(shot, this.settings.qrCodeSize, 100)
       if (mask && mask.cropped) {
         const intermediateTime = new Date()
         this.findingTime = (intermediateTime - startTime) / 1000
