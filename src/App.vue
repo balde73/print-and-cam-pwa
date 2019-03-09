@@ -9,7 +9,8 @@
       v-on:nRepairChange="nRepairChange"
       v-on:closeSettings="closeSettings"
       v-on:changeVibrations="changeVibrations"
-      v-on:debugModeChange="debugModeChange" />
+      v-on:debugModeChange="debugModeChange"
+      v-on:qrCodeChange="qrCodeChange" />
     <div class="canvas-video">
       <div class="real-canvas-video maxCanvasSize"
         v-bind:style="{
@@ -36,7 +37,7 @@
         </div>
         <div class="point"
           v-bind:style="{ left: point.x + '%', top: point.y + '%' }"
-          :class="{'is-tracking': isTracking, 'has-message': message}"
+          :class="{'is-tracking': isTracking, 'has-message': message, 'mask-found': maskFound}"
           >
         </div>
       </div>
@@ -81,7 +82,8 @@
           For better results take a picture using the native camera here:
         </div>
         <input @change="imgUpload" type="file" id="fileInput" accept="image/*" capture="environment" />
-        <button @click="cropAndReadCode">Decodifica</button>
+        <button @click="cropAndReadCode">Decode</button>
+        <button @click="readCode">Leggi</button>
         <img id="imageSrc" :src="imgElementSrc" alt="No Image" />
       </div>
     </div>
@@ -123,7 +125,9 @@ export default {
         nRepair: parseInt(this.$cookies.get('nRepair')) || 1,
         galleryFlash: false,
         maxVibration: parseInt(this.$cookies.get('maxVibration')) || 50,
-        debugMode: true
+        debugMode: true,
+        qrCodeSize: parseInt(this.$cookies.get('qrCodeSize')) || 29,
+        iWantToTrack: false
       },
       timeoutTracking: null,
       point: {
@@ -137,6 +141,7 @@ export default {
       openSettings: false,
       message: null,
       showMessage: false,
+      maskFound: false,
       isTracking: false,
       isTorchOn: false,
       isRecordingMotion: false,
@@ -238,7 +243,7 @@ export default {
       if (percAcc < this.settings.maxVibration) {
         this.gyroscope.still += 1
         if (this.gyroscope.still > 5) {
-          if (!this.isTracking) {
+          if (!this.maskFound) {
             this.gyroscope.still = 0
             this.searchMask()
           } else if (!this.message && this.gyroscope.still > 10) {
@@ -248,7 +253,7 @@ export default {
         }
       } else {
         this.gyroscope.still = 0
-        if (!this.isTracking && !this.message) {
+        if (!this.maskFound && !this.message) {
           this.suggestion = 'inquadra il codice'
         }
       }
@@ -296,8 +301,11 @@ export default {
       this.capture.read(shot)
       let mask = this.maskFinder.search(shot)
       if (mask) {
-        this.maskFinder.studyPortion(shot, mask.rect)
-        this.startTracking()
+        if (this.settings.iWantToTrack) {
+          this.maskFinder.studyPortion(shot, mask.rect)
+          this.startTracking()
+        }
+        this.maskFound = true
         this.suggestion = 'avvicinati per decodificare'
       }
     },
@@ -356,6 +364,7 @@ export default {
     },
     stopTracking () {
       console.log('>> STOP TRACKING')
+      this.maskFound = false
       this.isTracking = false
       this.message = null
       window.clearTimeout(this.timeoutTracking)
@@ -393,39 +402,11 @@ export default {
     decodeImage (image) {
       this.takeGalleryFlash()
       cv.imshow('canvasTransform', image)
-      this.message = Kircher.decode(image)
-    },
-    countErrors (message) {
-      // just for testing!
-      const maxSizeEncoded = parseInt(64 * 64 / (this.settings.nRepair * 8))
-      let st = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque interdum nec dolor non consectetur. Nam vel euismod mauris. Aliquam sit amet ligula in est rutrum auctor ut ac lorem. Duis blandit convallis pulvinar. Pellentesque sed vestibulum purus. Curabitur lacinia luctus orci ac molestie. Morbi gravida hendrerit neque, non consequat dui eleifend id. Morbi tincidunt nisi enim, vel laoreet magna rutrum vel. Quisque vel ultrices lacus. Sed id diam eget justo rutrum rutrum. Nulla maximus augue ex, at viverra sem venenatis id. Morbi id orci vel enim luctus condimentum. Cras metus neque, ultricies ut condimentum in, euismod in est. Etiam maximus neque vel velit suscipit semper. Pellentesque nec velit odio'
-      if (st.length > maxSizeEncoded) {
-        // cut the encoding
-        st = st.substring(0, maxSizeEncoded)
-      }
-      let encoding = Kircher.encodeBinaryString(st)
-      let code = Kircher.encodeBinaryString(message)
-      let errors = 0
-      for (let i = 0; i < code.length; i++) {
-        if (code[i] !== encoding[i]) {
-          errors += 1
-        }
-      }
-      let errorsString = 0
-      for (let i = 0; i < message.length; i++) {
-        if (message[i] !== st[i]) {
-          errorsString += 1
-        }
-      }
-      this.errors = errors + '/' + maxSizeEncoded * 8 + ' - ' + errorsString + '/' + maxSizeEncoded
-      console.log(this.errors)
+      this.message = Kircher.decode(image, this.settings.qrCodeSize)
     },
     readCode () {
       let image = cv.imread('imageSrc')
-      let code = Kircher.decode(image, this.settings.nRepair)
-      this.countErrors(code)
-      alert(code)
-      image.delete()
+      this.decodeImage(image)
     },
     cropAndReadCode () {
       let image = cv.imread('imageSrc')
@@ -433,6 +414,10 @@ export default {
     },
     closeSettings () {
       this.openSettings = false
+    },
+    qrCodeChange () {
+      console.log('ok')
+      this.$cookies.set('qrCodeSize', this.settings.qrCodeSize)
     },
     nRepairChange () {
       this.$cookies.set('nRepair', this.settings.nRepair)
@@ -526,8 +511,13 @@ video{
   background-color: yellow;
   opacity: 1;
 }
-.point.is-tracking.has-message:after{
+.point.mask-found:after{
+  background-color: #46cefa;
+  opacity: 1;
+}
+.point.has-message:after{
   background-color: greenyellow;
+  opacity: 1;
 }
 .tooltip{
   position: fixed;

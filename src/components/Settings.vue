@@ -5,12 +5,21 @@
         Version: 1.1.5
       </div>
       <div class="inline-input">
-        <label>Repair number</label>
-        <input type="number" min="1" max="10" @change="$emit('nRepairChange')" v-model.number="settings.nRepair" />
+        <label>QR-Code size</label>
+        <select @change="$emit('qrCodeChange')" v-model.number="settings.qrCodeSize">
+          <option v-bind:value="29">29 (default)</option>
+          <option v-bind:value="37">37</option>
+          <option v-bind:value="49">49</option>
+          <option v-bind:value="61">61</option>
+        </select>
       </div>
       <div class="inline-input">
         <label>Debug Mode</label>
         <input type="checkbox" @change="$emit('debugModeChange')" v-model="settings.debugMode" />
+      </div>
+      <div class="inline-input">
+        <label>Experimental track (for A mode)</label>
+        <input type="checkbox" v-model="settings.iWantToTrack" />
       </div>
       <div class="inline-input">
         <label>Max vibration</label>
@@ -88,6 +97,10 @@ input{
   text-align: center;
   background-color: rgba(0,0,0,.1);
   cursor: pointer;
+}
+select{
+  padding: .5rem 1rem;
+  font-size: 1.2rem;
 }
 </style>
 

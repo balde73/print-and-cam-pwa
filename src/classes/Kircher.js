@@ -43,7 +43,7 @@ export default class Kircher {
     return elString
   }
 
-  static decode (image) {
+  static decode (image, qrCodeSize = 29) {
     console.log('DECODING!')
     const startTime = new Date()
 
@@ -53,7 +53,6 @@ export default class Kircher {
 
     const height = grayImage.rows
     const width = grayImage.cols
-    const qrCodeSize = 29 // 4096 bit
 
     let bitImage = new cv.Mat.zeros(height, width, cv.CV_8UC1) // eslint-disable-line new-cap
     let errorImage = new cv.Mat()
