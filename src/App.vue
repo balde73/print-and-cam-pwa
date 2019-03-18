@@ -159,8 +159,8 @@ export default {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const settings = {
           video: {
-            width: { ideal: 1080 },
-            height: { ideal: 1080 },
+            width: { ideal: 4096 },
+            height: { ideal: 2160 },
             facingMode: 'environment'
           },
           audio: false
