@@ -24,10 +24,6 @@
             <div class="">
               {{ message }}
             </div>
-            -------
-            <div class="">
-              {{ findingTime }}s - {{ decodingTime }}s
-            </div>
           </div>
         </div>
         <div v-show="suggestion && !message" class="suggestion">
@@ -534,6 +530,7 @@ video{
   border-radius: 30px;
   padding: 1rem;
   margin: 0 auto;
+  font-size: 2rem;
 }
 .pre-controls{
   position: absolute;
