@@ -1,7 +1,6 @@
 # print-and-cam-pwa
 
 > Progressive web app decoding hidden information in HQR images
-http://wizardly-bardeen-e48e37.netlify.com/
 
 ## Build Setup
 
