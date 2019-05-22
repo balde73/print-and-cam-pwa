@@ -1,21 +1,30 @@
 # print-and-cam-pwa
 
-> A Vue.js project
+> Progressive web app decoding hidden information in HQR images
+http://wizardly-bardeen-e48e37.netlify.com/
 
 ## Build Setup
 
 ``` bash
 # install dependencies
-npm install
+yarn
 
 # serve with hot reload at localhost:8080
-npm run dev
+yarn dev
 
 # build for production with minification
-npm run build
+yarn build
 
 # build for production and view the bundle analyzer report
-npm run build --report
+yarn build --report
 ```
 
 For detailed explanation on how things work, checkout the [guide](http://vuejs-templates.github.io/webpack/) and [docs for vue-loader](http://vuejs.github.io/vue-loader).
+
+## Known issues
+
+- [ ] The app does not truely work offline due to a problem with OpenCV
+- [ ] The marker identification is extremely simple leading to false-positives
+- [ ] The decoding is time consuming (try using TensorFlow.js)
+- [ ] OpenCV is consuming a lot of memory and iOS devices can crash after some time
+- [ ] When an image is uploaded using the 'chose file' input, camera-orientation is not handled
